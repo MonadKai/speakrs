@@ -2,6 +2,13 @@
 
 ## [unreleased]
 
+## [0.4.1] - 2026-05-26
+
+- Fix embedding weight preparation so shorter masks clear stale tail values before reuse
+- Validate BLAS backend feature selection at compile time, including no-backend and multi-backend configurations
+- Reject `coreml` builds on unsupported targets at compile time and clarify macOS CoreML support in the docs
+- Keep only the fixture files still used by the crate tests
+
 ## [0.4.0] - 2026-04-15
 
 - Default `ndarray-linalg` to Intel MKL on `x86_64` and OpenBLAS elsewhere, which avoids OpenBLAS CPU-target issues on `x86_64`
