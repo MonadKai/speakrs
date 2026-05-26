@@ -2,7 +2,7 @@
 
 Fast Rust speaker diarization with pyannote-level accuracy.
 
-On VoxConverse dev, `speakrs` CoreML gets **7.1% DER at 529x realtime** versus pyannote's 7.2% at 24x. Full results are in [benchmarks/](benchmarks/).
+On VoxConverse dev, `speakrs` CoreML gets **7.1% DER at 529x realtime** versus pyannote's 7.2% at 24x. Full results are in [benchmarks/](https://github.com/avencera/speakrs/tree/master/benchmarks).
 
 If you want a small end-to-end app using it, see [avencera/smrze](https://github.com/avencera/smrze).
 
@@ -24,7 +24,7 @@ realtime versus pyannote's 7.2% at 24x. Full tables are in
 ## Usage
 
 ```toml
-# Apple Silicon (CoreML)
+# macOS (CoreML)
 speakrs = { version = "0.4", features = ["coreml"] }
 
 # NVIDIA GPU
@@ -111,8 +111,8 @@ let result = pipeline.run(&audio)?;
 | Mode | Backend | Step | Use it for |
 |------|---------|------|------------|
 | `cpu` | ONNX Runtime CPU | 1s | CPU runs and widest compatibility |
-| `coreml` | Native CoreML | 1s | Apple Silicon |
-| `coreml-fast` | Native CoreML | 2s | Apple Silicon for higher throughput |
+| `coreml` | Native CoreML | 1s | macOS with CoreML acceleration |
+| `coreml-fast` | Native CoreML | 2s | macOS with CoreML acceleration and higher throughput |
 | `cuda` | ONNX Runtime CUDA | 1s | NVIDIA GPU |
 | `cuda-fast` | ONNX Runtime CUDA | 2s | NVIDIA GPU for higher throughput |
 
@@ -168,7 +168,7 @@ Set `SPEAKRS_MODELS_DIR` if you want to force a local bundle instead.
 Common features:
 
 - `online` (default): model download via [`ModelManager`]
-- `coreml`: native CoreML backend for Apple Silicon
+- `coreml`: native CoreML backend on macOS
 - `cuda`: NVIDIA CUDA backend via ONNX Runtime
 - `load-dynamic`: load the CUDA runtime at startup instead of static linking
 
@@ -176,7 +176,7 @@ BLAS backends matter if you disable default features:
 
 - `x86_64` defaults to statically linked Intel MKL
 - non-`x86_64` defaults to statically linked OpenBLAS and needs a C toolchain
-- advanced opt-ins are `intel-mkl`, `openblas-static`, and `openblas-system`
+- no-default builds must enable exactly one of `intel-mkl`, `openblas-static`, or `openblas-system`
 
 ```toml
 speakrs = { version = "0.4", default-features = false, features = ["online", "intel-mkl"] }

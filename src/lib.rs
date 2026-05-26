@@ -18,7 +18,7 @@
 //! # Usage
 //!
 //! ```toml
-//! # Apple Silicon (CoreML)
+//! # macOS (CoreML)
 //! speakrs = { version = "0.4", features = ["coreml"] }
 //!
 //! # NVIDIA GPU
@@ -114,8 +114,8 @@
 //! | Mode | Backend | Step | Use it for |
 //! |------|---------|------|------------|
 //! | `cpu` | ONNX Runtime CPU | 1s | CPU runs and widest compatibility |
-//! | `coreml` | Native CoreML | 1s | Apple Silicon |
-//! | `coreml-fast` | Native CoreML | 2s | Apple Silicon for higher throughput |
+//! | `coreml` | Native CoreML | 1s | macOS with CoreML acceleration |
+//! | `coreml-fast` | Native CoreML | 2s | macOS with CoreML acceleration and higher throughput |
 //! | `cuda` | ONNX Runtime CUDA | 1s | NVIDIA GPU |
 //! | `cuda-fast` | ONNX Runtime CUDA | 2s | NVIDIA GPU for higher throughput |
 //!
@@ -171,7 +171,7 @@
 //! Common features:
 //!
 //! - `online` (default): model download via [`ModelManager`]
-//! - `coreml`: native CoreML backend for Apple Silicon
+//! - `coreml`: native CoreML backend on macOS
 //! - `cuda`: NVIDIA CUDA backend via ONNX Runtime
 //! - `load-dynamic`: load the CUDA runtime at startup instead of static linking
 //!
@@ -179,7 +179,7 @@
 //!
 //! - `x86_64` defaults to statically linked Intel MKL
 //! - non-`x86_64` defaults to statically linked OpenBLAS and needs a C toolchain
-//! - advanced opt-ins are `intel-mkl`, `openblas-static`, and `openblas-system`
+//! - no-default builds must enable exactly one of `intel-mkl`, `openblas-static`, or `openblas-system`
 //!
 //! ```toml
 //! speakrs = { version = "0.4", default-features = false, features = ["online", "intel-mkl"] }
@@ -198,6 +198,9 @@
 //! - [`PipelineConfig`] and [`RuntimeConfig`]: tuning knobs
 //! - [`ModelManager`]: model download when `online` is enabled
 //! - [`Segment`]: a single speaker turn
+
+#[cfg(all(feature = "coreml", not(target_os = "macos")))]
+compile_error!("the `coreml` feature is only supported on macOS");
 
 pub(crate) mod binarize;
 pub(crate) mod clustering;
