@@ -387,33 +387,25 @@ impl EmbeddingModel {
         mask_frames: usize,
         weights_buffer: &mut ndarray::ArrayViewMut2<f32>,
     ) {
+        let mut row = weights_buffer.row_mut(batch_idx);
         if weights.len() == mask_frames {
-            weights_buffer
-                .row_mut(batch_idx)
-                .assign(&ndarray::ArrayView1::from(weights));
+            row.assign(&ndarray::ArrayView1::from(weights));
             return;
         }
 
         let copy_len = weights.len().min(mask_frames);
-        weights_buffer
-            .slice_mut(s![batch_idx, ..copy_len])
+        row.fill(0.0);
+        row.slice_mut(s![..copy_len])
             .assign(&ndarray::ArrayView1::from(&weights[..copy_len]));
     }
 
     fn prepare_single_weights(&mut self, weights: &[f32]) {
-        if weights.len() == self.meta.mask_frames {
-            self.buffers
-                .weights_buffer
-                .row_mut(0)
-                .assign(&ndarray::ArrayView1::from(weights));
-            return;
-        }
-
-        let copy_len = weights.len().min(self.meta.mask_frames);
-        self.buffers
-            .weights_buffer
-            .slice_mut(s![0, ..copy_len])
-            .assign(&ndarray::ArrayView1::from(&weights[..copy_len]));
+        Self::prepare_weights(
+            0,
+            weights,
+            self.meta.mask_frames,
+            &mut self.buffers.weights_buffer.view_mut(),
+        );
     }
 }
 
@@ -435,6 +427,7 @@ pub(crate) fn should_use_clean_mask(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::array;
 
     #[test]
     fn select_mask_prefers_clean_mask_when_it_is_long_enough() {
@@ -454,5 +447,15 @@ mod tests {
         let selected = select_mask(&mask, Some(&clean), 16_000, 6_000);
 
         assert_eq!(selected, mask);
+    }
+
+    #[test]
+    fn prepare_weights_clears_tail_when_mask_is_shorter_than_buffer() {
+        let mut buffer = ndarray::Array2::from_elem((2, 4), 9.0);
+
+        EmbeddingModel::prepare_weights(0, &[1.0, 2.0], 4, &mut buffer.view_mut());
+        EmbeddingModel::prepare_weights(1, &[3.0, 4.0, 5.0, 6.0, 7.0], 4, &mut buffer.view_mut());
+
+        assert_eq!(buffer, array![[1.0, 2.0, 0.0, 0.0], [3.0, 4.0, 5.0, 6.0]]);
     }
 }
