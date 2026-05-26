@@ -127,8 +127,9 @@ VoxConverse dev, collar=0ms:
 | RTX 4090 | `speakrs` `cuda-fast` | 7.4% | 604s | **121x** |
 | RTX 4090 | pyannote community-1 (CUDA) | 7.2% | 2312s | 32x |
 
-On VoxConverse test, both `coreml` and `cuda` match pyannote at 11.1% DER
-and are much faster. See
+On VoxConverse test, `coreml` matches pyannote at 11.1% DER and runs at
+631x realtime versus pyannote's 23x. `cuda` matches pyannote at 11.1% DER
+and runs at 50x realtime versus pyannote's 18x. See
 [benchmarks/](https://github.com/avencera/speakrs/tree/master/benchmarks) for
 the full tables across all datasets.
 
