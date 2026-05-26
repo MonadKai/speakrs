@@ -58,8 +58,8 @@ impl PipelineConfig {
                     min_duration_off: 3,
                     ..BinarizeConfig::default()
                 },
-                // Fast modes use 3 VBx iterations to avoid posterior overfitting
-                // on 2 second step embeddings.
+                // fast modes use 3 VBx iterations to avoid posterior overfitting
+                // on 2 second step embeddings
                 vbx: VbxConfig {
                     max_iters: 3,
                     ..VbxConfig::default()

@@ -81,8 +81,8 @@ struct WorkerRequest {
 /// Background queue sender for incremental diarization requests
 ///
 /// The worker thread drains queued requests into batches and processes them via
-/// `run_batch_with_config`, preserving cross-file batch optimizations (chunk embedding,
-/// Priority-pull) within each worker pass
+/// `run_batch_with_config`, preserving cross-file batch optimizations within
+/// each worker pass
 ///
 /// ```no_run
 /// # use speakrs::pipeline::*;

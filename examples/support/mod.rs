@@ -29,24 +29,10 @@ pub fn file_id_from_path(path: &Path) -> String {
 
 pub fn load_models(path: &Path) -> ExampleResult<(SegmentationModel, EmbeddingModel)> {
     let segmentation = SegmentationModel::new(
-        path.join("segmentation-3.0.onnx").to_str().ok_or_else(|| {
-            format!(
-                "segmentation model path is not valid UTF-8: {}",
-                path.join("segmentation-3.0.onnx").display()
-            )
-        })?,
+        path.join("segmentation-3.0.onnx"),
         DiarizationPipeline::default_segmentation_step(),
     )?;
-    let embedding = EmbeddingModel::new(
-        path.join("wespeaker-voxceleb-resnet34.onnx")
-            .to_str()
-            .ok_or_else(|| {
-                format!(
-                    "embedding model path is not valid UTF-8: {}",
-                    path.join("wespeaker-voxceleb-resnet34.onnx").display()
-                )
-            })?,
-    )?;
+    let embedding = EmbeddingModel::new(path.join("wespeaker-voxceleb-resnet34.onnx"))?;
     Ok((segmentation, embedding))
 }
 

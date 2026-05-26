@@ -181,7 +181,7 @@ pub(super) fn run_pipelined<'scope>(
         cpu_prep_ms = total_prep_fbank_us / 1000,
         predict_ms = total_predict_us / 1000,
         emb_wall_ms = emb_start.elapsed().as_millis(),
-        "Priority-pull breakdown"
+        "Chunk embedding worker breakdown"
     );
 
     Ok(EmbeddingSummary {

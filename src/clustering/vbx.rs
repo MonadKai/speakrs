@@ -26,8 +26,8 @@ impl Default for VbxConfig {
 /// VBx clustering matching pyannote's algorithm
 ///
 /// Takes PLDA-transformed features and per-dimension eigenvalues (Phi),
-/// Plus AHC-initialized gamma responsibilities. All computation is done
-/// In f64 to match pyannote's numpy default precision
+/// plus AHC-initialized gamma responsibilities. All computation is done
+/// in f64 to match pyannote's numpy default precision
 pub fn vbx(
     features: &ArrayView2<f32>,
     phi: &ArrayView1<f32>,
@@ -54,7 +54,7 @@ pub fn vbx(
         .map(|row| -0.5 * (row.dot(&row) + dim as f64 * (2.0 * std::f64::consts::PI).ln()))
         .collect();
 
-    // V = sqrt(Phi)
+    // v = sqrt(phi)
     let phi_sqrt = phi_f64.mapv(f64::sqrt);
 
     // rho = X * V (element-wise broadcast)
@@ -67,7 +67,7 @@ pub fn vbx(
     let mut scratch = Array1::<f64>::zeros(n_speakers);
 
     for iter in 0..config.max_iters {
-        // M-step: compute speaker models
+        // m-step: compute speaker models
         // invL[k,d] = 1.0 / (1 + Fa/Fb * N_k * Phi[d])
         // alpha[k,d] = Fa/Fb * invL[k,d] * sum_t(gamma[t,k] * rho[t,d])
         let n_k: Array1<f64> = gamma.sum_axis(Axis(0));
@@ -93,7 +93,7 @@ pub fn vbx(
             }
         }
 
-        // E-step
+        // e-step
         // log_p_[t,k] = Fa * (rho[t] . alpha[k] - 0.5 * (invL[k] + alpha[k]^2) . Phi + G[t])
         let mut log_p = Array2::<f64>::zeros((n_samples, n_speakers));
         for sample_idx in 0..n_samples {
@@ -136,7 +136,7 @@ pub fn vbx(
         let pi_sum = pi.sum();
         pi /= pi_sum;
 
-        // ELBO = sum(log_p_x) + Fb * 0.5 * sum(ln(invL) - invL - alpha^2 + 1)
+        // elbo = sum(log_p_x) + Fb * 0.5 * sum(ln(invL) - invL - alpha^2 + 1)
         let log_px_sum: f64 = log_p_x.sum();
         let reg: f64 = inv_l
             .iter()

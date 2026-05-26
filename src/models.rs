@@ -198,7 +198,7 @@ fn required_files(mode: ExecutionMode) -> Vec<String> {
             files.push("wespeaker-voxceleb-resnet34-b64.onnx".to_string());
         }
         ExecutionMode::CoreMl => {
-            // CoreML modes still need the ONNX segmentation model for the constructor
+            // native CoreML modes still need the ONNX segmentation model for the constructor
             files.push("segmentation-3.0.onnx".to_string());
             files.push("wespeaker-voxceleb-resnet34.onnx".to_string());
             files.push("wespeaker-voxceleb-resnet34.onnx.data".to_string());
