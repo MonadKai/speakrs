@@ -2,18 +2,12 @@
 #![warn(clippy::undocumented_unsafe_blocks)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! Fast Rust speaker diarization.
+//! `speakrs` implements the full pyannote `community-1` style diarization
+//! pipeline in Rust: segmentation, powerset decode, overlap-add aggregation,
+//! binarization, embedding, PLDA, and VBx clustering.
 //!
-//! `speakrs` implements the full pyannote `community-1` style pipeline in
-//! Rust: segmentation, powerset decode, overlap-add aggregation, binarization,
-//! embedding, PLDA, and VBx clustering. There is no Python runtime in the
-//! library path. Inference runs on ONNX Runtime or native CoreML and the rest
-//! of the pipeline stays in Rust.
-//!
-//! The goal is to get pyannote-class diarization without shipping a Python
-//! stack. On VoxConverse dev, `speakrs` CoreML gets 7.1% DER at 529x
-//! realtime versus pyannote's 7.2% at 24x. Full tables are in
-//! [benchmarks/](https://github.com/avencera/speakrs/tree/master/benchmarks).
+//! There is no Python runtime in the library path. Inference runs on ONNX
+//! Runtime or native CoreML, and the rest of the pipeline stays in Rust.
 //!
 //! # Usage
 //!
