@@ -112,9 +112,14 @@ let result = pipeline.run(&audio)?;
 | `cuda` | ONNX Runtime CUDA | 1s | NVIDIA GPU |
 | `cuda-fast` | ONNX Runtime CUDA | 2s | NVIDIA GPU for higher throughput |
 
-The `*-fast` modes use a 2 second step instead of 1 second. They usually
-trade some boundary precision for more throughput. Start with `coreml` or
-`cuda` unless you already know you want the faster step size.
+The `*-fast` modes move the segmentation window every 2 seconds instead of
+every 1 second. That gives the pipeline fewer windows to score, so it can be
+much faster, but speaker changes may land a little farther from the exact
+word or pause where they happened. Use the 1 second modes when you care about
+exactly when each speaker starts and stops, short clips, interviews with quick
+back-and-forth, or audio you plan to subtitle or edit. The 2 second modes are
+usually worth trying for long recordings where speed matters more than exact
+speaker-change times, such as meetings, lectures, podcasts, or bulk archives.
 
 ## Benchmarks
 
