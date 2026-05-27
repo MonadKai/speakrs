@@ -6,6 +6,8 @@ On VoxConverse dev, `speakrs` CoreML gets **7.1% DER at 529x realtime** versus p
 
 If you want a small end-to-end app using it, see [avencera/smrze](https://github.com/avencera/smrze).
 
+## Overview
+
 <!-- cargo-rdme start -->
 
 `speakrs` implements the full pyannote `community-1` style diarization
