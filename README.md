@@ -1,6 +1,6 @@
 # speakrs
 
-Fast Rust speaker diarization with pyannote-level accuracy.
+Fast Rust speaker diarization (who spoke when) with pyannote-level accuracy.
 
 On VoxConverse dev, `speakrs` CoreML gets **7.1% DER at 529x realtime** versus pyannote's 7.2% at 24x. Full results are in [benchmarks/](https://github.com/avencera/speakrs/tree/master/benchmarks).
 
