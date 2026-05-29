@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+## [0.4.2] - 2026-05-29
+
+- Fix the published crate manifest so `ort`, `crossbeam-channel`, `rayon`, `thiserror`, `tracing`, and `libloading` are available on `x86_64`
+- Add GitHub Actions checks for the packaged crate artifact to catch manifest dependency-scope regressions before publishing
+
 ## [0.4.1] - 2026-05-26
 
 - Fix embedding weight preparation so shorter masks clear stale tail values before reuse

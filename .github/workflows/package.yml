@@ -1,0 +1,111 @@
+name: Package
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTUP_TOOLCHAIN: stable
+
+jobs:
+  crate:
+    name: Crate artifact
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        run: rustup toolchain install stable --profile minimal
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-package-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-package-
+
+      - name: Confirm x86_64 host
+        run: |
+          set -euo pipefail
+          host="$(rustc -vV | sed -n 's/^host: //p')"
+          case "$host" in
+            x86_64-*) ;;
+            *) echo "expected x86_64 host, got $host" >&2; exit 1 ;;
+          esac
+
+      - name: Build crate package
+        run: cargo package --locked
+
+      - name: Extract crate package
+        run: |
+          set -euo pipefail
+          crate="$(find target/package -maxdepth 1 -name 'speakrs-*.crate' -print -quit)"
+          test -n "$crate"
+          mkdir -p "$RUNNER_TEMP/speakrs-package"
+          tar -xzf "$crate" -C "$RUNNER_TEMP/speakrs-package"
+          package_dir="$(find "$RUNNER_TEMP/speakrs-package" -mindepth 1 -maxdepth 1 -type d -name 'speakrs-*' -print -quit)"
+          test -n "$package_dir"
+          printf 'SPEAKRS_PACKAGE_DIR=%s\n' "$package_dir" >> "$GITHUB_ENV"
+
+      - name: Check packaged dependency scopes
+        run: |
+          set -euo pipefail
+          metadata="$RUNNER_TEMP/speakrs-package-metadata.json"
+          cargo metadata --manifest-path "$SPEAKRS_PACKAGE_DIR/Cargo.toml" --format-version 1 --no-deps > "$metadata"
+          METADATA="$metadata" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          with open(os.environ["METADATA"], encoding="utf-8") as file:
+              metadata = json.load(file)
+
+          package = next(package for package in metadata["packages"] if package["name"] == "speakrs")
+          expected = {
+              "crossbeam-channel",
+              "libloading",
+              "ort",
+              "rayon",
+              "thiserror",
+              "tracing",
+          }
+          normal_dependencies = {
+              dependency["name"]
+              for dependency in package["dependencies"]
+              if dependency["kind"] is None and dependency["target"] is None
+          }
+          missing = sorted(expected - normal_dependencies)
+          if missing:
+              print(f"dependencies are not normal dependencies: {', '.join(missing)}", file=sys.stderr)
+              sys.exit(1)
+          PY
+
+      - name: Check packaged crate as a dependency
+        run: |
+          set -euo pipefail
+          consumer="$RUNNER_TEMP/speakrs-package-consumer"
+          mkdir -p "$consumer/src"
+          cat > "$consumer/Cargo.toml" <<EOF
+          [package]
+          name = "speakrs-package-consumer"
+          version = "0.0.0"
+          edition = "2024"
+          publish = false
+
+          [dependencies]
+          speakrs = { path = "$SPEAKRS_PACKAGE_DIR" }
+          EOF
+          cat > "$consumer/src/lib.rs" <<'EOF'
+          pub fn execution_mode() -> speakrs::ExecutionMode {
+              speakrs::ExecutionMode::Cpu
+          }
+          EOF
+          cargo check --manifest-path "$consumer/Cargo.toml"
