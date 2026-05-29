@@ -314,6 +314,7 @@ fn assert_embedding_tensor_close(actual: &Array3<f32>, expected: &Array3<f32>, e
     }
 }
 
+#[cfg(feature = "coreml")]
 fn assert_segmentation_tensor_matches(actual: &Array3<f32>, expected: &Array3<f32>) {
     for chunk_idx in 0..actual.shape()[0] {
         for frame_idx in 0..actual.shape()[1] {

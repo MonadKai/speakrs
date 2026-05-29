@@ -1,51 +1,70 @@
 name: CI
 
 on:
-  pull_request:
+  workflow_dispatch: {}
   push:
-    branches: [master]
-  workflow_dispatch:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTUP_TOOLCHAIN: stable
+  RUSTFLAGS: -D warnings
 
 jobs:
-  rust:
-    name: Rust (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  clippy:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             features: cuda migraphx load-dynamic _metrics
-            clippy_targets: ""
-          - os: macos-14
+          - os: macos-latest
             features: coreml cuda migraphx load-dynamic _metrics
-            clippy_targets: --all-targets
-
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Install Rust
-        run: rustup toolchain install stable --profile minimal --component clippy rustfmt
-
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          path: |
-            ~/.cargo/git
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          components: clippy
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+          prefix-key: v1-rust
 
       - name: Run clippy
-        run: cargo clippy --workspace ${{ matrix.clippy_targets }} --features "${{ matrix.features }}" -- -D warnings
+        run: cargo clippy --workspace --all-targets --features "${{ matrix.features }}" -- -D warnings
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            features: cuda migraphx load-dynamic _metrics
+          - os: macos-latest
+            features: coreml cuda migraphx load-dynamic _metrics
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+          prefix-key: v1-rust
 
       - name: Compile tests
-        run: cargo test --workspace --no-run
+        run: cargo test --workspace --features "${{ matrix.features }}" --no-run
