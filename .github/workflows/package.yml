@@ -20,7 +20,7 @@ env:
 
 jobs:
   crate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
 
@@ -48,37 +48,6 @@ jobs:
           rm -rf target/package
           cargo package --locked
 
-      - name: Check packaged manifest
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          package_dir="$(find target/package -mindepth 1 -maxdepth 1 -type d -name 'speakrs-*' -print -quit)"
-          test -n "$package_dir"
-
-          metadata="$RUNNER_TEMP/speakrs-package-metadata.json"
-          cargo metadata --manifest-path "$package_dir/Cargo.toml" --format-version 1 --no-deps > "$metadata"
-
-          normal_dependencies="$(
-            jq -r '
-              .packages[]
-              | select(.name == "speakrs")
-              | .dependencies[]
-              | select(.kind == null and .target == null)
-              | .name
-            ' "$metadata" | sort -u
-          )"
-
-          missing=0
-          for dependency in crossbeam-channel libloading ort rayon thiserror tracing; do
-            if ! grep -Fxq "$dependency" <<< "$normal_dependencies"; then
-              echo "dependency is not a normal dependency: $dependency" >&2
-              missing=1
-            fi
-          done
-
-          exit "$missing"
-
       - name: Check packaged crate as a dependency
         shell: bash
         run: |
@@ -87,24 +56,37 @@ jobs:
           package_dir="$(find target/package -mindepth 1 -maxdepth 1 -type d -name 'speakrs-*' -print -quit)"
           test -n "$package_dir"
 
-          consumer="$RUNNER_TEMP/speakrs-package-consumer"
-          mkdir -p "$consumer/src"
+          package_path="$PWD/$package_dir"
 
-          cat > "$consumer/Cargo.toml" <<EOF
+          check_consumer() {
+            local name="$1"
+            local dependency="$2"
+            local consumer="$RUNNER_TEMP/speakrs-package-consumer-$name"
+
+            rm -rf "$consumer"
+            mkdir -p "$consumer/src"
+
+            cat > "$consumer/Cargo.toml" <<EOF
           [package]
-          name = "speakrs-package-consumer"
+          name = "speakrs-package-consumer-$name"
           version = "0.0.0"
           edition = "2024"
           publish = false
 
           [dependencies]
-          speakrs = { path = "$PWD/$package_dir" }
+          speakrs = $dependency
           EOF
 
-          cat > "$consumer/src/lib.rs" <<'EOF'
+            cat > "$consumer/src/lib.rs" <<'EOF'
           pub fn execution_mode() -> speakrs::ExecutionMode {
               speakrs::ExecutionMode::Cpu
           }
           EOF
 
-          cargo check --manifest-path "$consumer/Cargo.toml"
+            echo "Checking packaged crate dependency: $name"
+            cargo check --manifest-path "$consumer/Cargo.toml"
+          }
+
+          check_consumer default "{ path = \"$package_path\" }"
+          check_consumer load-dynamic "{ path = \"$package_path\", features = [\"load-dynamic\"] }"
+          check_consumer custom-linalg "{ path = \"$package_path\", default-features = false, features = [\"online\", \"intel-mkl\"] }"

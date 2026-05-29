@@ -19,13 +19,19 @@ env:
 
 jobs:
   clippy:
+    name: Clippy (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - name: Linux x86_64
+            os: ubuntu-24.04
             features: cuda migraphx load-dynamic _metrics
-          - os: macos-latest
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+            features: cuda migraphx load-dynamic _metrics
+          - name: macOS arm64
+            os: macos-15
             features: coreml cuda migraphx load-dynamic _metrics
     runs-on: ${{ matrix.os }}
     steps:
@@ -46,12 +52,17 @@ jobs:
         run: cargo clippy --workspace --all-targets --features "${{ matrix.features }}" -- -D warnings
 
   test:
+    name: Test (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest
+        include:
+          - name: Linux x86_64
+            os: ubuntu-24.04
+          - name: Linux arm64
+            os: ubuntu-24.04-arm
+          - name: macOS arm64
+            os: macos-15
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
