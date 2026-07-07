@@ -28,6 +28,8 @@ jobs:
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check
+          rust-version: "1.88.0"
+          arguments: --no-default-features --features online,default-linalg,cuda,migraphx,load-dynamic,_metrics
 
   msrv:
     name: MSRV Rust 1.88
