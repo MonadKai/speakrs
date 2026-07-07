@@ -4,7 +4,7 @@ use ort::value::TensorRef;
 use tracing::debug;
 
 use super::{PRIMARY_BATCH_SIZE, SegmentationError, SegmentationModel};
-use crate::inference::segmentation::tensor::SegmentationWindows;
+use crate::inference::segmentation::tensor::{SegmentationWindows, first_output, output_shape3};
 
 impl SegmentationModel {
     /// Run segmentation on audio, streaming raw logits through a channel
@@ -106,7 +106,10 @@ impl SegmentationModel {
                     .map(|idx| windows.window(idx, "segmentation run batch window"))
                     .collect::<Result<_, _>>()
                     .map_err(|error| ort::Error::new(error.to_string()))?;
-                results.extend(self.run_batch(&batch)?);
+                results.extend(
+                    self.run_batch(&batch)
+                        .map_err(|error| ort::Error::new(error.to_string()))?,
+                );
                 next_idx += PRIMARY_BATCH_SIZE;
                 continue;
             }
@@ -114,14 +117,17 @@ impl SegmentationModel {
             let window = windows
                 .window(next_idx, "segmentation run tail window")
                 .map_err(|error| ort::Error::new(error.to_string()))?;
-            results.push(self.run_window(window)?);
+            results.push(
+                self.run_window(window)
+                    .map_err(|error| ort::Error::new(error.to_string()))?,
+            );
             next_idx += 1;
         }
 
         Ok(results)
     }
 
-    fn run_window(&mut self, window: &[f32]) -> Result<Array2<f32>, ort::Error> {
+    fn run_window(&mut self, window: &[f32]) -> Result<Array2<f32>, SegmentationError> {
         #[cfg(feature = "coreml")]
         if let Some(ref native) = self.native_session {
             return Self::run_native_single(
@@ -129,7 +135,8 @@ impl SegmentationModel {
                 window,
                 &mut self.input_buffer,
                 &self.cached_single_input_shape,
-            );
+            )
+            .map_err(SegmentationError::Ort);
         }
 
         self.input_buffer.fill(0.0);
@@ -139,16 +146,20 @@ impl SegmentationModel {
         let input_tensor = TensorRef::from_array_view(self.input_buffer.view())?;
 
         let outputs = self.session.run(ort::inputs![input_tensor])?;
-        let (shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = first_output(outputs.values(), "segmentation window output")?;
+        let (shape, data) = output.try_extract_tensor::<f32>()?;
 
-        let frames = shape[1] as usize;
-        let classes = shape[2] as usize;
+        let (_batch, frames, classes) = output_shape3(shape, "segmentation window output")?;
 
-        Array2::from_shape_vec((frames, classes), data.to_vec())
-            .map_err(|error| ort::Error::new(format!("segmentation window output shape: {error}")))
+        Array2::from_shape_vec((frames, classes), data.to_vec()).map_err(|error| {
+            SegmentationError::MalformedOutput {
+                context: "segmentation window output",
+                message: format!("invalid output shape: {error}"),
+            }
+        })
     }
 
-    fn run_batch(&mut self, windows: &[&[f32]]) -> Result<Vec<Array2<f32>>, ort::Error> {
+    fn run_batch(&mut self, windows: &[&[f32]]) -> Result<Vec<Array2<f32>>, SegmentationError> {
         #[cfg(feature = "coreml")]
         if let Some(ref native) = self.native_batched_session {
             return Self::run_native_batch(
@@ -156,7 +167,8 @@ impl SegmentationModel {
                 windows,
                 &mut self.primary_batch_input_buffer,
                 &self.cached_batch_input_shape,
-            );
+            )
+            .map_err(SegmentationError::Ort);
         }
 
         self.primary_batch_input_buffer.fill(0.0);
@@ -172,19 +184,35 @@ impl SegmentationModel {
             .as_mut()
             .ok_or_else(|| ort::Error::new("missing primary batched segmentation session"))?
             .run(ort::inputs![input_tensor])?;
-        let (shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = first_output(outputs.values(), "segmentation batch output")?;
+        let (shape, data) = output.try_extract_tensor::<f32>()?;
 
-        let batch = shape[0] as usize;
-        let frames = shape[1] as usize;
-        let classes = shape[2] as usize;
+        let (batch, frames, classes) = output_shape3(shape, "segmentation batch output")?;
         let stride = frames * classes;
+        let expected_len =
+            batch
+                .checked_mul(stride)
+                .ok_or_else(|| SegmentationError::MalformedOutput {
+                    context: "segmentation batch output",
+                    message: format!("output shape {shape} exceeded addressable memory"),
+                })?;
+        if data.len() != expected_len {
+            return Err(SegmentationError::MalformedOutput {
+                context: "segmentation batch output",
+                message: format!(
+                    "shape {shape} expected {expected_len} values, got {}",
+                    data.len()
+                ),
+            });
+        }
 
         (0..batch)
             .map(|batch_idx| {
                 let start = batch_idx * stride;
                 Array2::from_shape_vec((frames, classes), data[start..start + stride].to_vec())
-                    .map_err(|error| {
-                        ort::Error::new(format!("segmentation batch output shape: {error}"))
+                    .map_err(|error| SegmentationError::MalformedOutput {
+                        context: "segmentation batch output",
+                        message: format!("invalid output shape: {error}"),
                     })
             })
             .collect::<Result<Vec<_>, _>>()

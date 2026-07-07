@@ -2,6 +2,7 @@ use crate::inference::{ExecutionModeError, ModelLoadError};
 
 /// Errors that can occur during the diarization pipeline
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum PipelineError {
     /// Model construction or ONNX Runtime initialization error
     #[error(transparent)]

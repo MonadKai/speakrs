@@ -63,6 +63,7 @@ impl PipelineBuilder {
 
     /// Download models from HuggingFace and start building
     #[cfg(feature = "online")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "online")))]
     pub fn from_pretrained(mode: ExecutionMode) -> Result<Self, PipelineError> {
         mode.validate()?;
         let bundle = ModelBundle::from_pretrained(mode)?;

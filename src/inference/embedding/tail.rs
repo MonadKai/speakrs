@@ -5,7 +5,7 @@ use ort::value::TensorRef;
 use super::tensor::{array2_slice, array3_slice};
 use super::{
     CHUNK_SPEAKER_BATCH_SIZE, EmbeddingModel, FBANK_FEATURES, FBANK_FRAMES, array1_slice,
-    array2_from_shape_vec, array3_slice_mut, select_mask, should_use_clean_mask,
+    array2_from_shape_vec, array3_slice_mut, first_output, select_mask, should_use_clean_mask,
 };
 
 impl EmbeddingModel {
@@ -125,7 +125,8 @@ impl EmbeddingModel {
             .as_mut()
             .ok_or_else(|| ort::Error::new("missing split tail session"))?
             .run(ort::inputs!["fbank" => fbank_tensor, "weights" => weights_tensor])?;
-        let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = first_output(outputs.values(), "split tail output")?;
+        let (_shape, data) = output.try_extract_tensor::<f32>()?;
         Ok(Array1::from_vec(data.to_vec()))
     }
 
@@ -211,7 +212,8 @@ impl EmbeddingModel {
             .as_mut()
             .ok_or_else(|| ort::Error::new("missing split tail batched session"))?
             .run(ort::inputs!["fbank" => fbank_tensor, "weights" => weights_tensor])?;
-        let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = first_output(outputs.values(), "tail batch output")?;
+        let (_shape, data) = output.try_extract_tensor::<f32>()?;
         array2_from_shape_vec(
             segmentations.ncols(),
             256,

@@ -3,10 +3,10 @@ mod support;
 use std::fs;
 use std::path::Path;
 
-use speakrs::pipeline::{DiarizationPipeline, FRAME_DURATION_SECONDS, FRAME_STEP_SECONDS};
 use speakrs::segment::Segment;
+use speakrs::{ExecutionMode, OwnedDiarizationPipeline};
 
-use support::{ExampleResult, load_models, load_wav_samples};
+use support::{ExampleResult, load_wav_samples};
 
 struct TranscriptRow {
     start: f64,
@@ -28,14 +28,13 @@ fn main() -> ExampleResult<()> {
     let audio_path = Path::new(&args[2]);
     let transcript_path = Path::new(&args[3]);
 
-    let mut models = load_models(models_dir)?;
     let audio = load_wav_samples(audio_path)?;
-    let mut pipeline = DiarizationPipeline::new(&mut models.0, &mut models.1, models_dir)?;
+    let mut pipeline = OwnedDiarizationPipeline::from_dir(models_dir, ExecutionMode::Cpu)?;
     let result = pipeline.run(&audio)?;
 
     let mut exclusive = result.discrete_diarization.clone();
     exclusive.make_exclusive();
-    let segments = exclusive.to_segments(FRAME_STEP_SECONDS, FRAME_DURATION_SECONDS);
+    let segments = exclusive.to_segments();
     let transcript = load_transcript(transcript_path)?;
 
     println!("start\tend\tspeaker\ttext");

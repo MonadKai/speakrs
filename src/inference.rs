@@ -44,18 +44,24 @@ impl CoreMlComputeUnits {
 
 /// Which backend and acceleration to use for inference
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ExecutionMode {
     /// CPU-only via ORT (portable, slowest)
     Cpu,
     /// Native CoreML with FP32 precision and ~1s step
+    #[cfg_attr(docsrs, doc(cfg(feature = "coreml")))]
     CoreMl,
     /// Native CoreML with W8A16 segmentation and ~2s step
+    #[cfg_attr(docsrs, doc(cfg(feature = "coreml")))]
     CoreMlFast,
     /// NVIDIA GPU with concurrent fused seg+emb via crossbeam
+    #[cfg_attr(docsrs, doc(cfg(feature = "cuda")))]
     Cuda,
     /// NVIDIA GPU with concurrent fused seg+emb and ~2s step
+    #[cfg_attr(docsrs, doc(cfg(feature = "cuda")))]
     CudaFast,
     /// AMD GPU via ONNX Runtime's MIGraphX execution provider
+    #[cfg_attr(docsrs, doc(cfg(feature = "migraphx")))]
     MiGraphX,
 }
 
@@ -147,6 +153,7 @@ impl fmt::Display for ExecutionMode {
 
 /// Errors that can occur while loading a model or initializing ONNX Runtime
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum ModelLoadError {
     /// Requested execution mode is not supported by this build
     #[error(transparent)]
@@ -179,6 +186,7 @@ pub enum ModelLoadError {
 
 /// Errors that can occur while preparing the process-wide ONNX Runtime environment
 #[derive(Debug, Clone, thiserror::Error)]
+#[non_exhaustive]
 pub enum OrtRuntimeError {
     /// Dynamic runtime discovery or validation failed before `ort` could initialize
     #[error(transparent)]
@@ -193,6 +201,7 @@ pub enum OrtRuntimeError {
 
 /// Errors from locating or validating the dynamic ONNX Runtime library
 #[derive(Debug, Clone, thiserror::Error)]
+#[non_exhaustive]
 pub enum DynamicRuntimeError {
     /// No candidate runtime library was found
     #[error(
@@ -240,6 +249,7 @@ pub enum DynamicRuntimeError {
 
 /// Errors from requesting an execution mode that is not supported in the current build
 #[derive(Debug, Clone, thiserror::Error)]
+#[non_exhaustive]
 #[error("{mode} requires the `{feature}` Cargo feature")]
 pub struct ExecutionModeError {
     mode: ExecutionMode,

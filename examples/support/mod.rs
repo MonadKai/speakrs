@@ -3,9 +3,6 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 
-use speakrs::inference::{EmbeddingModel, SegmentationModel};
-use speakrs::pipeline::DiarizationPipeline;
-
 pub type ExampleResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
 #[allow(dead_code)]
@@ -25,15 +22,6 @@ pub fn file_id_from_path(path: &Path) -> String {
         .and_then(OsStr::to_str)
         .unwrap_or("file1")
         .to_owned()
-}
-
-pub fn load_models(path: &Path) -> ExampleResult<(SegmentationModel, EmbeddingModel)> {
-    let segmentation = SegmentationModel::new(
-        path.join("segmentation-3.0.onnx"),
-        DiarizationPipeline::default_segmentation_step(),
-    )?;
-    let embedding = EmbeddingModel::new(path.join("wespeaker-voxceleb-resnet34.onnx"))?;
-    Ok((segmentation, embedding))
 }
 
 pub fn load_wav_samples(path: &Path) -> ExampleResult<Vec<f32>> {

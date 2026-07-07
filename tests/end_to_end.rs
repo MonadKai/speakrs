@@ -9,9 +9,9 @@ use speakrs::pipeline::{DiarizationPipeline, FRAME_STEP_SECONDS, SEGMENTATION_ST
 use speakrs::inference::ExecutionMode;
 #[cfg(all(feature = "coreml", feature = "_metrics"))]
 use speakrs::metrics::{compute_der, parse_rttm};
-#[cfg(feature = "coreml")]
+#[cfg(all(feature = "coreml", feature = "_metrics"))]
 use speakrs::pipeline::FAST_SEGMENTATION_STEP_SECONDS;
-#[cfg(feature = "coreml")]
+#[cfg(all(feature = "coreml", feature = "_metrics"))]
 use std::time::{Duration, Instant};
 
 mod support;

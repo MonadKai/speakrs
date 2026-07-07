@@ -21,16 +21,19 @@ Runtime or native CoreML, and the rest of the pipeline stays in Rust.
 
 ```toml
 # macOS (CoreML)
-speakrs = { version = "0.4", features = ["coreml"] }
+speakrs = { version = "0.5", features = ["coreml"] }
 
 # NVIDIA GPU
-speakrs = { version = "0.4", features = ["cuda"] }
+speakrs = { version = "0.5", features = ["cuda"] }
 
 # CPU only
-speakrs = "0.4"
+speakrs = "0.5"
 
 # System OpenBLAS
-speakrs = { version = "0.4", default-features = false, features = ["online", "openblas-system"] }
+speakrs = { version = "0.5", default-features = false, features = ["online", "openblas-system"] }
+
+# AMD GPU
+speakrs = { version = "0.5", features = ["migraphx"] }
 ```
 
 ### Quick start
@@ -52,21 +55,17 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 ### Speaker turns
 
 ```rust
-use speakrs::pipeline::{FRAME_DURATION_SECONDS, FRAME_STEP_SECONDS};
 
 let result = pipeline.run(&audio)?;
 
-for segment in result
-    .discrete_diarization
-    .to_segments(FRAME_STEP_SECONDS, FRAME_DURATION_SECONDS)
-{
+for segment in result.discrete_diarization.to_segments() {
     println!("{:.3} - {:.3}  {}", segment.start, segment.end, segment.speaker);
 }
 ```
 
 ### Background queue
 
-[`QueueSender`] and [`QueueReceiver`] run a background worker. Push audio
+[`QueueSender`](https://docs.rs/speakrs/latest/speakrs/pipeline/queued/struct.QueueSender.html) and [`QueueReceiver`](https://docs.rs/speakrs/latest/speakrs/pipeline/queued/struct.QueueReceiver.html) run a background worker. Push audio
 from any thread and read results as they finish:
 
 ```rust
@@ -111,6 +110,7 @@ let result = pipeline.run(&audio)?;
 | `coreml-fast` | Native CoreML | 2s | macOS with CoreML acceleration and higher throughput |
 | `cuda` | ONNX Runtime CUDA | 1s | NVIDIA GPU |
 | `cuda-fast` | ONNX Runtime CUDA | 2s | NVIDIA GPU for higher throughput |
+| `migraphx` | ONNX Runtime MIGraphX | 1s | AMD GPU |
 
 The `*-fast` modes move the segmentation window every 2 seconds instead of
 every 1 second. That gives the pipeline fewer windows to score, so it can be much faster, but speaker changes
@@ -169,10 +169,11 @@ Set `SPEAKRS_MODELS_DIR` if you want to force a local bundle instead.
 
 Common features:
 
-- `online` (default): model download via [`ModelManager`]
+- `online` (default): model download via [`ModelManager`](https://docs.rs/speakrs/latest/speakrs/models/struct.ModelManager.html)
 - `coreml`: native CoreML backend on macOS
 - `cuda`: NVIDIA CUDA backend via ONNX Runtime
-- `load-dynamic`: load the CUDA runtime at startup instead of static linking
+- `migraphx`: AMD GPU backend via ONNX Runtime MIGraphX
+- `load-dynamic`: load the ONNX Runtime library at startup instead of static linking
 
 BLAS backends matter if you disable default features:
 
@@ -181,8 +182,8 @@ BLAS backends matter if you disable default features:
 - no-default builds must enable exactly one of `intel-mkl`, `openblas-static`, or `openblas-system`
 
 ```toml
-speakrs = { version = "0.4", default-features = false, features = ["online", "intel-mkl"] }
-speakrs = { version = "0.4", default-features = false, features = ["online", "openblas-system"] }
+speakrs = { version = "0.5", default-features = false, features = ["online", "intel-mkl"] }
+speakrs = { version = "0.5", default-features = false, features = ["online", "openblas-system"] }
 ```
 
 The ONNX Runtime dependency (`ort` 2.0.0-rc.12) is still pre-release.
@@ -191,12 +192,12 @@ The ONNX Runtime dependency (`ort` 2.0.0-rc.12) is still pre-release.
 
 Start here:
 
-- [`OwnedDiarizationPipeline`]: pipeline entry point
-- [`QueueSender`] and [`QueueReceiver`]: background worker interface
-- [`DiarizationResult`]: frame-level activations, segments, clusters, embeddings, RTTM
-- [`PipelineConfig`] and [`RuntimeConfig`]: tuning knobs
-- [`ModelManager`]: model download when `online` is enabled
-- [`Segment`]: a single speaker turn
+- [`OwnedDiarizationPipeline`](https://docs.rs/speakrs/latest/speakrs/pipeline/struct.OwnedDiarizationPipeline.html): pipeline entry point
+- [`QueueSender`](https://docs.rs/speakrs/latest/speakrs/pipeline/queued/struct.QueueSender.html) and [`QueueReceiver`](https://docs.rs/speakrs/latest/speakrs/pipeline/queued/struct.QueueReceiver.html): background worker interface
+- [`DiarizationResult`](https://docs.rs/speakrs/latest/speakrs/pipeline/types/data/struct.DiarizationResult.html): frame-level activations, segments, clusters, embeddings, RTTM
+- [`PipelineConfig`](https://docs.rs/speakrs/latest/speakrs/pipeline/config/struct.PipelineConfig.html) and [`RuntimeConfig`](https://docs.rs/speakrs/latest/speakrs/pipeline/config/struct.RuntimeConfig.html): tuning knobs
+- [`ModelManager`](https://docs.rs/speakrs/latest/speakrs/models/struct.ModelManager.html): model download when `online` is enabled
+- [`Segment`](https://docs.rs/speakrs/latest/speakrs/segment/struct.Segment.html): a single speaker turn
 
 <!-- cargo-rdme end -->
 

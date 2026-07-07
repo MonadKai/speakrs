@@ -51,6 +51,7 @@ pub struct QueuedDiarizationResult {
 
 /// Errors from the queued diarization pipeline
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum QueueError {
     /// The queue has finished processing all submitted jobs
     #[error("queue has finished processing all submitted jobs")]
@@ -64,6 +65,9 @@ pub enum QueueError {
     /// The background worker thread panicked
     #[error("worker thread panicked: {0}")]
     WorkerPanicked(String),
+    /// The receiver reached an unexpected terminal queue error
+    #[error("queue reached terminal error: {0}")]
+    Terminal(String),
 }
 
 impl QueueError {
@@ -158,6 +162,7 @@ enum QueueReceiverState {
     Running,
     Closed,
     WorkerPanicked(String),
+    Terminal(String),
 }
 
 /// Background queue receiver for diarization results
@@ -212,7 +217,11 @@ impl QueueReceiver {
                 self.state = QueueReceiverState::WorkerPanicked(message.clone());
                 QueueError::WorkerPanicked(message)
             }
-            Err(err) => unreachable!("unexpected terminal queue error: {err}"),
+            Err(err) => {
+                let message = err.to_string();
+                self.state = QueueReceiverState::Terminal(message);
+                err
+            }
         }
     }
 
@@ -223,6 +232,7 @@ impl QueueReceiver {
             QueueReceiverState::WorkerPanicked(message) => {
                 QueueError::WorkerPanicked(message.clone())
             }
+            QueueReceiverState::Terminal(message) => QueueError::Terminal(message.clone()),
         }
     }
 }
@@ -418,5 +428,22 @@ mod tests {
             sender.push(QueuedDiarizationRequest::new("file", Vec::new())),
             Err(QueueError::WorkerGone)
         ));
+    }
+
+    #[test]
+    fn receiver_repeats_unexpected_terminal_error_without_panicking() {
+        let (_result_tx, result_rx) = crossbeam_channel::bounded(1);
+        let mut receiver = QueueReceiver {
+            result_rx,
+            worker: None,
+            state: QueueReceiverState::Terminal("future terminal error".to_owned()),
+        };
+
+        assert!(
+            matches!(receiver.recv(), Err(QueueError::Terminal(message)) if message == "future terminal error")
+        );
+        assert!(
+            matches!(receiver.try_recv(), Err(QueueError::Terminal(message)) if message == "future terminal error")
+        );
     }
 }

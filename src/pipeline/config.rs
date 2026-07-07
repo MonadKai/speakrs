@@ -1,12 +1,11 @@
-use crate::binarize::BinarizeConfig;
-use crate::clustering::ahc::AhcConfig;
-use crate::clustering::vbx::VbxConfig;
 #[cfg(feature = "coreml")]
 use crate::inference::CoreMlComputeUnits;
 use crate::inference::ExecutionMode;
+use crate::pipeline::{AhcConfig, BinarizeConfig, VbxConfig};
 
 /// How to map cluster assignments back to per-frame speaker activations
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
 pub enum ReconstructMethod {
     /// Standard top-K selection (pyannote-compatible)
     Standard,
@@ -80,6 +79,7 @@ pub struct RuntimeConfig {
     pub chunk_emb_workers: usize,
     /// CoreML compute units for chunk embedding (CoreML modes only)
     #[cfg(feature = "coreml")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "coreml")))]
     pub chunk_emb_compute_units: CoreMlComputeUnits,
 }
 

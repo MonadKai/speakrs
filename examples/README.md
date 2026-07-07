@@ -6,6 +6,7 @@ These examples cover the basic pyannote-style workflows:
 - iterate speaker turns
 - compute speaker airtime
 - reconcile transcript chunks with diarization output
+- submit queued diarization jobs from cloned senders across threads
 
 All examples expect:
 
@@ -91,4 +92,10 @@ Output:
 start   end     speaker     text
 0.000   3.200   SPEAKER_00  Welcome everyone
 3.200   7.800   SPEAKER_01  Let's get started
+```
+
+## Queue files from multiple sender threads
+
+```bash
+cargo run --example queued -- fixtures/models fixtures/test.wav fixtures/test.wav
 ```

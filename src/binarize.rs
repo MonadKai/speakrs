@@ -1,12 +1,19 @@
 use ndarray::Array2;
 
+/// Hysteresis and duration-filtering settings for frame-level speaker activity.
 #[derive(Debug, Clone)]
 pub struct BinarizeConfig {
+    /// Activation threshold for starting an active speaker region.
     pub onset: f32,
+    /// Deactivation threshold for ending an active speaker region.
     pub offset: f32,
+    /// Minimum active-region length, in frames, before the region is kept.
     pub min_duration_on: usize,
+    /// Maximum inactive gap length, in frames, that should be filled between active regions.
     pub min_duration_off: usize,
+    /// Number of frames to extend an active region before its detected onset.
     pub pad_onset: usize,
+    /// Number of frames to extend an active region after its detected offset.
     pub pad_offset: usize,
 }
 

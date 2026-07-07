@@ -2,6 +2,11 @@
 
 ## [unreleased]
 
+- Prepare the 0.5.0 breaking API cleanup: expose tuning config types, make selected public enums non-exhaustive, rename custom segment conversion to `to_segments_with`, and make `Segment` display human-readable text instead of RTTM.
+- Harden queue terminal handling and malformed inference-output paths so unexpected terminal states and missing ORT outputs return errors instead of panicking.
+- Modernize shipped examples around `OwnedDiarizationPipeline`/`PipelineBuilder`, including a queued sender-clone example.
+- Add dependency policy, MSRV, no-default-features, docs, README, package, and release-readiness checks.
+
 ## [0.4.2] - 2026-05-29
 
 - Fix the published crate manifest so `ort`, `crossbeam-channel`, `rayon`, `thiserror`, `tracing`, and `libloading` are available on `x86_64`
