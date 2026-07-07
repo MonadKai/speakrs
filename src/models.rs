@@ -34,6 +34,7 @@ impl ModelBundle {
 
     /// Download models from HuggingFace and resolve paths
     #[cfg(feature = "online")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "online")))]
     pub fn from_pretrained(mode: ExecutionMode) -> Result<Self, hf_hub::api::sync::ApiError> {
         let manager = ModelManager::new()?;
         let dir = manager.ensure(mode)?;
@@ -61,6 +62,7 @@ const HF_REPO: &str = "avencera/speakrs-models";
 
 /// Manages downloading and caching speakrs ONNX models from HuggingFace
 #[cfg(feature = "online")]
+#[cfg_attr(docsrs, doc(cfg(feature = "online")))]
 pub struct ModelManager {
     repo: hf_hub::api::sync::ApiRepo,
 }

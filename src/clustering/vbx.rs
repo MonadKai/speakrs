@@ -2,12 +2,18 @@ use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis};
 
 use crate::utils::logsumexp_f64;
 
+/// Variational Bayes HMM clustering settings.
 #[derive(Debug, Clone, Copy)]
 pub struct VbxConfig {
+    /// Speaker model scale used by the VBx update equations.
     pub fa: f64,
+    /// Speaker regularization scale used by the VBx update equations.
     pub fb: f64,
+    /// Maximum number of VBx iterations.
     pub max_iters: usize,
+    /// Minimum ELBO improvement required to continue iterating.
     pub epsilon: f64,
+    /// Smoothing factor applied to AHC labels before VBx refinement.
     pub init_smoothing: f64,
 }
 

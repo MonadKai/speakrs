@@ -3,8 +3,10 @@ use ndarray::{Array2, ArrayView2};
 
 use crate::utils::l2_normalize_rows;
 
+/// Agglomerative hierarchical clustering settings for speaker embeddings.
 #[derive(Debug, Clone, Copy)]
 pub struct AhcConfig {
+    /// Maximum dendrogram merge distance to keep observations in one flat cluster.
     pub threshold: f32,
 }
 

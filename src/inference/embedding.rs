@@ -35,7 +35,7 @@ use paths::{
     split_fbank_batched_model_path, split_fbank_model_path, split_tail_model_path,
 };
 use tensor::{
-    array1_slice, array2_from_shape_vec, array2_slice_mut, array3_slice_mut,
+    array1_slice, array2_from_shape_vec, array2_slice_mut, array3_slice_mut, first_output,
     preallocated_run_options,
 };
 
@@ -60,7 +60,9 @@ pub(crate) struct SplitTailInput<'a> {
 }
 
 struct EmbeddingMeta {
+    #[cfg_attr(not(feature = "coreml"), allow(dead_code))]
     model_path: PathBuf,
+    #[cfg_attr(not(feature = "coreml"), allow(dead_code))]
     mode: ExecutionMode,
     sample_rate: usize,
     window_samples: usize,
@@ -168,7 +170,7 @@ impl EmbeddingModel {
     }
 
     /// Maximum batch size for the primary (fused) embedding session
-    pub fn primary_batch_size(&self) -> usize {
+    pub(crate) fn primary_batch_size(&self) -> usize {
         if self.ort.primary_batched_session.is_some() {
             PRIMARY_BATCH_SIZE
         } else {
@@ -177,7 +179,7 @@ impl EmbeddingModel {
     }
 
     /// Choose the best batch length given the number of pending embeddings
-    pub fn best_batch_len(&self, pending_len: usize) -> usize {
+    pub(crate) fn best_batch_len(&self, pending_len: usize) -> usize {
         if pending_len >= PRIMARY_BATCH_SIZE && self.ort.primary_batched_session.is_some() {
             PRIMARY_BATCH_SIZE
         } else {
@@ -185,83 +187,8 @@ impl EmbeddingModel {
         }
     }
 
-    /// Reload all ORT sessions from disk, resetting internal state
-    pub fn reset_session(&mut self) -> Result<(), ort::Error> {
-        #[cfg(feature = "coreml")]
-        if matches!(
-            self.meta.mode,
-            ExecutionMode::CoreMl | ExecutionMode::CoreMlFast
-        ) {
-            Self::validate_native_coreml_assets(&self.meta.model_path, self.meta.mode)
-                .map_err(|error| ort::Error::new(error.to_string()))?;
-        }
-
-        self.ort.session = Self::build_session(
-            &self.meta.model_path,
-            Self::single_execution_mode(self.meta.mode),
-        )?;
-        self.ort.primary_batched_session =
-            batched_model_path(&self.meta.model_path, PRIMARY_BATCH_SIZE)
-                .filter(|path| path.exists())
-                .map(|path| Self::build_batched_session(&path, self.meta.mode))
-                .transpose()?;
-        let split_fbank_path = split_fbank_model_path(&self.meta.model_path);
-        let split_tail_path = split_tail_model_path(&self.meta.model_path, 1);
-        let split_tail_batched_path =
-            split_tail_model_path(&self.meta.model_path, CHUNK_SPEAKER_BATCH_SIZE);
-        let split_primary_tail_batched_path =
-            split_tail_model_path(&self.meta.model_path, PRIMARY_BATCH_SIZE);
-        let use_split_backend = Self::split_backend_available(&self.meta.model_path);
-        let split_fbank_batched_path = split_fbank_batched_model_path(&self.meta.model_path);
-        self.ort.split_fbank_session = use_split_backend
-            .then(|| Self::build_fbank_session(&split_fbank_path, ExecutionMode::Cpu))
-            .transpose()?;
-        self.ort.split_fbank_batched_session = use_split_backend
-            .then_some(split_fbank_batched_path)
-            .filter(|path| path.exists())
-            .map(|path| Self::build_fbank_session(&path, ExecutionMode::Cpu))
-            .transpose()?;
-        self.ort.split_tail_session = use_split_backend
-            .then(|| Self::build_session(&split_tail_path, self.meta.mode))
-            .transpose()?;
-        self.ort.split_tail_batched_session = use_split_backend
-            .then_some(split_tail_batched_path)
-            .filter(|path| path.exists())
-            .map(|path| Self::build_session(&path, self.meta.mode))
-            .transpose()?;
-        self.ort.split_primary_tail_batched_session = use_split_backend
-            .then_some(split_primary_tail_batched_path)
-            .filter(|path| path.exists())
-            .map(|path| Self::build_session(&path, self.meta.mode))
-            .transpose()?;
-        #[cfg(feature = "coreml")]
-        {
-            // keep existing compute units on reload
-            self.coreml.native_tail_session = None;
-            self.coreml.native_tail_batched_session = None;
-            self.coreml.native_tail_primary_batched_session = None;
-            self.coreml.native_fbank_session = None;
-            self.coreml.native_fbank_batched_session = None;
-            self.coreml.native_fbank_30s_session = None;
-            self.coreml.native_multi_mask_session = None;
-            self.coreml.native_chunk_specs =
-                Self::chunk_session_specs(&self.meta.model_path, self.meta.mode);
-            self.coreml.native_chunk_sessions.clear();
-        }
-        self.ort.multi_mask_session = multi_mask_model_path(&self.meta.model_path, 1)
-            .filter(|p| p.exists())
-            .map(|p| Self::build_session(&p, self.meta.mode))
-            .transpose()?;
-        self.ort.multi_mask_batched_session =
-            multi_mask_model_path(&self.meta.model_path, PRIMARY_BATCH_SIZE)
-                .filter(|p| p.exists())
-                .map(|p| Self::build_session(&p, self.meta.mode))
-                .transpose()?;
-        Ok(())
-    }
-
     /// Whether split fbank+tail models are available for chunk embedding
-    pub fn prefers_chunk_embedding_path(&self) -> bool {
+    pub(crate) fn prefers_chunk_embedding_path(&self) -> bool {
         #[cfg(feature = "coreml")]
         if self.meta.mode.is_coreml() {
             return Self::has_native_fbank_model(&self.meta.model_path, self.meta.mode, 1)
@@ -297,7 +224,7 @@ impl EmbeddingModel {
     }
 
     /// Whether a batched fbank session is available for parallel chunk processing
-    pub fn has_batched_fbank(&self) -> bool {
+    pub(crate) fn has_batched_fbank(&self) -> bool {
         #[cfg(feature = "coreml")]
         if self.meta.mode.is_coreml() {
             return Self::has_native_fbank_model(
@@ -319,7 +246,7 @@ impl EmbeddingModel {
     }
 
     /// Whether the multi-mask embedding model is available
-    pub fn prefers_multi_mask_path(&self) -> bool {
+    pub(crate) fn prefers_multi_mask_path(&self) -> bool {
         #[cfg(feature = "coreml")]
         if self.meta.mode.is_coreml() {
             return Self::has_native_multi_mask_model(&self.meta.model_path, self.meta.mode);
@@ -332,7 +259,7 @@ impl EmbeddingModel {
     }
 
     /// Maximum batch size for multi-mask embedding, or 0 if unavailable
-    pub fn multi_mask_batch_size(&self) -> usize {
+    pub(crate) fn multi_mask_batch_size(&self) -> usize {
         #[cfg(feature = "coreml")]
         if self.meta.mode.is_coreml() {
             return usize::from(Self::has_native_multi_mask_model(

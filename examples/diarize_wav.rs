@@ -2,9 +2,9 @@ mod support;
 
 use std::path::Path;
 
-use speakrs::pipeline::DiarizationPipeline;
+use speakrs::{ExecutionMode, OwnedDiarizationPipeline};
 
-use support::{ExampleResult, file_id_from_path, load_models, load_wav_samples};
+use support::{ExampleResult, file_id_from_path, load_wav_samples};
 
 fn main() -> ExampleResult<()> {
     support::init_tracing();
@@ -21,9 +21,8 @@ fn main() -> ExampleResult<()> {
         .cloned()
         .unwrap_or_else(|| file_id_from_path(audio_path));
 
-    let mut models = load_models(models_dir)?;
     let audio = load_wav_samples(audio_path)?;
-    let mut pipeline = DiarizationPipeline::new(&mut models.0, &mut models.1, models_dir)?;
+    let mut pipeline = OwnedDiarizationPipeline::from_dir(models_dir, ExecutionMode::Cpu)?;
     let result = pipeline.run(&audio)?;
 
     print!("{}", result.rttm(&file_id));

@@ -4,9 +4,9 @@ exclude = ["scripts/"]
 
 [package]
 name = "speakrs"
-version = "0.4.2"
+version = "0.5.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 description = "Fast Rust speaker diarization with pyannote-level accuracy and native CoreML/CUDA acceleration"
 license = "Apache-2.0"
 repository = "https://github.com/avencera/speakrs"
@@ -33,7 +33,7 @@ openblas-system = ["dep:ndarray-linalg-system"]
 _metrics = []
 
 [package.metadata.docs.rs]
-features = ["cuda", "load-dynamic", "_metrics"]
+features = ["cuda", "migraphx", "load-dynamic", "_metrics"]
 
 [dependencies]
 hf-hub = { version = "0.5", optional = true, default-features = false }

@@ -60,6 +60,16 @@ pub(super) fn array3_slice_mut<'a>(
         .ok_or_else(|| ort::Error::new(format!("{context}: array buffer was not contiguous")))
 }
 
+pub(super) fn first_output<T>(
+    outputs: impl IntoIterator<Item = T>,
+    context: &'static str,
+) -> Result<T, ort::Error> {
+    outputs
+        .into_iter()
+        .next()
+        .ok_or_else(|| ort::Error::new(format!("{context}: missing output tensor")))
+}
+
 pub(super) fn preallocated_run_options(
     rows: usize,
     cols: usize,
@@ -77,4 +87,16 @@ pub(super) fn preallocated_run_options(
         .map(|options| {
             options.with_outputs(OutputSelector::default().preallocate("output", output))
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::first_output;
+
+    #[test]
+    fn first_output_reports_missing_tensor() {
+        let error = first_output(Vec::<()>::new(), "embedding test").unwrap_err();
+
+        assert_eq!(error.to_string(), "embedding test: missing output tensor");
+    }
 }

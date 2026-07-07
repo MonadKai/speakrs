@@ -31,10 +31,11 @@ impl std::fmt::Display for Segment {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
-            "SPEAKER file 1 {:.3} {:.3} <NA> <NA> {} <NA> <NA>",
+            "{} {:.3}s-{:.3}s ({:.3}s)",
+            self.speaker,
             self.start,
-            self.duration(),
-            self.speaker
+            self.end,
+            self.duration()
         )
     }
 }
@@ -211,12 +212,9 @@ mod tests {
     }
 
     #[test]
-    fn display_trait_rttm_line() {
+    fn display_trait_human_readable() {
         let seg = Segment::new(1.0, 2.5, "SPEAKER_01");
         let display = format!("{seg}");
-        assert_eq!(
-            display,
-            "SPEAKER file 1 1.000 1.500 <NA> <NA> SPEAKER_01 <NA> <NA>"
-        );
+        assert_eq!(display, "SPEAKER_01 1.000s-2.500s (1.500s)");
     }
 }

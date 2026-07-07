@@ -3,7 +3,7 @@ use ort::value::TensorRef;
 
 #[cfg(feature = "coreml")]
 use super::tensor::array3_slice;
-use super::{EmbeddingModel, FBANK_BATCH_SIZE, array2_from_shape_vec};
+use super::{EmbeddingModel, FBANK_BATCH_SIZE, array2_from_shape_vec, first_output};
 
 impl EmbeddingModel {
     /// Compute fbank features for a single audio chunk via the split fbank model
@@ -46,7 +46,8 @@ impl EmbeddingModel {
             .as_mut()
             .ok_or_else(|| ort::Error::new("missing split fbank session"))?
             .run(ort::inputs!["waveform" => waveform_tensor])?;
-        let (shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = first_output(outputs.values(), "chunk fbank output")?;
+        let (shape, data) = output.try_extract_tensor::<f32>()?;
         let frames = shape[1] as usize;
         let features = shape[2] as usize;
         array2_from_shape_vec(frames, features, data.to_vec(), "chunk fbank output")
@@ -102,7 +103,8 @@ impl EmbeddingModel {
                 .as_mut()
                 .ok_or_else(|| ort::Error::new("missing split fbank batched session"))?
                 .run(ort::inputs!["waveform" => waveform_tensor])?;
-            let (shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+            let output = first_output(outputs.values(), "batched chunk fbank output")?;
+            let (shape, data) = output.try_extract_tensor::<f32>()?;
             Self::push_fbank_batch_results(
                 &mut results,
                 data,

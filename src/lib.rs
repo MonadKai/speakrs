@@ -13,16 +13,19 @@
 //!
 //! ```toml
 //! # macOS (CoreML)
-//! speakrs = { version = "0.4", features = ["coreml"] }
+//! speakrs = { version = "0.5", features = ["coreml"] }
 //!
 //! # NVIDIA GPU
-//! speakrs = { version = "0.4", features = ["cuda"] }
+//! speakrs = { version = "0.5", features = ["cuda"] }
 //!
 //! # CPU only
-//! speakrs = "0.4"
+//! speakrs = "0.5"
 //!
 //! # System OpenBLAS
-//! speakrs = { version = "0.4", default-features = false, features = ["online", "openblas-system"] }
+//! speakrs = { version = "0.5", default-features = false, features = ["online", "openblas-system"] }
+//!
+//! # AMD GPU
+//! speakrs = { version = "0.5", features = ["migraphx"] }
 //! ```
 //!
 //! ## Quick start
@@ -46,16 +49,12 @@
 //!
 //! ```no_run
 //! # use speakrs::{ExecutionMode, OwnedDiarizationPipeline};
-//! use speakrs::pipeline::{FRAME_DURATION_SECONDS, FRAME_STEP_SECONDS};
 //!
 //! # let mut pipeline = OwnedDiarizationPipeline::from_pretrained(ExecutionMode::CoreMl)?;
 //! # let audio: Vec<f32> = vec![];
 //! let result = pipeline.run(&audio)?;
 //!
-//! for segment in result
-//!     .discrete_diarization
-//!     .to_segments(FRAME_STEP_SECONDS, FRAME_DURATION_SECONDS)
-//! {
+//! for segment in result.discrete_diarization.to_segments() {
 //!     println!("{:.3} - {:.3}  {}", segment.start, segment.end, segment.speaker);
 //! }
 //! # Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
@@ -112,6 +111,7 @@
 //! | `coreml-fast` | Native CoreML | 2s | macOS with CoreML acceleration and higher throughput |
 //! | `cuda` | ONNX Runtime CUDA | 1s | NVIDIA GPU |
 //! | `cuda-fast` | ONNX Runtime CUDA | 2s | NVIDIA GPU for higher throughput |
+//! | `migraphx` | ONNX Runtime MIGraphX | 1s | AMD GPU |
 //!
 //! The `*-fast` modes move the segmentation window every 2 seconds instead of
 //! every 1 second. That gives the pipeline fewer windows to score, so it can be much faster, but speaker changes
@@ -173,7 +173,8 @@
 //! - `online` (default): model download via [`ModelManager`]
 //! - `coreml`: native CoreML backend on macOS
 //! - `cuda`: NVIDIA CUDA backend via ONNX Runtime
-//! - `load-dynamic`: load the CUDA runtime at startup instead of static linking
+//! - `migraphx`: AMD GPU backend via ONNX Runtime MIGraphX
+//! - `load-dynamic`: load the ONNX Runtime library at startup instead of static linking
 //!
 //! BLAS backends matter if you disable default features:
 //!
@@ -182,8 +183,8 @@
 //! - no-default builds must enable exactly one of `intel-mkl`, `openblas-static`, or `openblas-system`
 //!
 //! ```toml
-//! speakrs = { version = "0.4", default-features = false, features = ["online", "intel-mkl"] }
-//! speakrs = { version = "0.4", default-features = false, features = ["online", "openblas-system"] }
+//! speakrs = { version = "0.5", default-features = false, features = ["online", "intel-mkl"] }
+//! speakrs = { version = "0.5", default-features = false, features = ["online", "openblas-system"] }
 //! ```
 //!
 //! The ONNX Runtime dependency (`ort` 2.0.0-rc.12) is still pre-release.
@@ -221,16 +222,19 @@ pub mod segment;
 pub(crate) mod utils;
 
 // crate-root re-exports for the main import path
-pub use inference::ExecutionMode;
+pub use inference::{CoreMlComputeUnits, ExecutionMode};
 pub use models::ModelBundle;
 #[cfg(feature = "online")]
+#[cfg_attr(docsrs, doc(cfg(feature = "online")))]
 pub use models::ModelManager;
 pub use pipeline::{
-    BatchInput, DiarizationPipeline, DiarizationResult, OwnedDiarizationPipeline, PipelineBuilder,
-    PipelineConfig, PipelineError, QueueError, QueueReceiver, QueueReceiverIter, QueueSender,
-    QueuedDiarizationJobId, QueuedDiarizationRequest, QueuedDiarizationResult, RuntimeConfig,
+    AhcConfig, BatchInput, BinarizeConfig, DiarizationPipeline, DiarizationResult,
+    OwnedDiarizationPipeline, PipelineBuilder, PipelineConfig, PipelineError, QueueError,
+    QueueReceiver, QueueReceiverIter, QueueSender, QueuedDiarizationJobId,
+    QueuedDiarizationRequest, QueuedDiarizationResult, RuntimeConfig, VbxConfig,
 };
 pub use segment::Segment;
 
 #[cfg(feature = "_metrics")]
+#[cfg_attr(docsrs, doc(cfg(feature = "_metrics")))]
 pub use powerset::PowersetMapping;

@@ -6,9 +6,7 @@ use crate::clustering::plda::PldaTransform;
 use crate::reconstruct::Reconstructor;
 use crate::segment::merge_segments;
 
-use super::config::{
-    FRAME_DURATION_SECONDS, FRAME_STEP_SECONDS, PipelineConfig, ReconstructMethod,
-};
+use super::config::{PipelineConfig, ReconstructMethod};
 use super::types::{
     ChunkSpeakerClusters, DiarizationResult, DiscreteDiarization, InferenceArtifacts, PipelineError,
 };
@@ -62,7 +60,7 @@ pub fn post_inference(
         discrete_diarization
     };
 
-    let segments = discrete_diarization.to_segments(FRAME_STEP_SECONDS, FRAME_DURATION_SECONDS);
+    let segments = discrete_diarization.to_segments();
     let segments = merge_segments(&segments, config.merge_gap);
 
     debug!(

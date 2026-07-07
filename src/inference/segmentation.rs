@@ -15,6 +15,7 @@ mod tensor;
 
 /// Errors that can occur during segmentation inference
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum SegmentationError {
     /// ONNX Runtime error
     #[error(transparent)]
@@ -28,6 +29,14 @@ pub enum SegmentationError {
         /// Which step failed
         context: &'static str,
         /// Invariant failure details
+        message: String,
+    },
+    /// Model output was missing or had an unexpected shape
+    #[error("{context}: {message}")]
+    MalformedOutput {
+        /// Which output extraction step failed
+        context: &'static str,
+        /// Output validation details
         message: String,
     },
     /// Background worker panicked
@@ -45,7 +54,6 @@ const LARGE_BATCH_SIZE: usize = 64;
 
 /// Sliding-window segmentation model (pyannote segmentation-3.0)
 pub struct SegmentationModel {
-    model_path: PathBuf,
     mode: ExecutionMode,
     session: Session,
     primary_batched_session: Option<Session>,
@@ -178,7 +186,6 @@ impl SegmentationModel {
         }
 
         Ok(Self {
-            model_path: model_path.to_path_buf(),
             mode,
             session,
             primary_batched_session,
@@ -246,40 +253,6 @@ impl SegmentationModel {
     /// Execution mode this model was loaded with
     pub fn mode(&self) -> ExecutionMode {
         self.mode
-    }
-
-    /// Reload all ORT and native CoreML sessions from disk
-    pub fn reset_session(&mut self) -> Result<(), ort::Error> {
-        self.session = Self::build_session(&self.model_path, self.mode)?;
-        self.primary_batched_session = batched_model_path(&self.model_path, PRIMARY_BATCH_SIZE)
-            .filter(|path| path.exists())
-            .map(|path| Self::build_session(&path, self.mode))
-            .transpose()?;
-        #[cfg(feature = "coreml")]
-        {
-            if matches!(self.mode, ExecutionMode::CoreMl | ExecutionMode::CoreMlFast) {
-                Self::validate_native_coreml_assets(&self.model_path, self.mode)
-                    .map_err(|error| ort::Error::new(error.to_string()))?;
-            }
-            self.native_session = Self::load_native_coreml(&self.model_path, self.mode)
-                .map_err(|error| ort::Error::new(error.to_string()))?;
-            self.native_batched_session =
-                Self::load_native_coreml_batched(&self.model_path, self.mode)
-                    .map_err(|error| ort::Error::new(error.to_string()))?;
-            self.native_large_batched_session =
-                Self::load_native_coreml_large_batched(&self.model_path, self.mode)
-                    .map_err(|error| ort::Error::new(error.to_string()))?;
-            if self.native_session.is_none()
-                || self.native_batched_session.is_none()
-                || self.native_large_batched_session.is_none()
-            {
-                return Err(ort::Error::new(format!(
-                    "{} native CoreML sessions failed to load",
-                    self.mode
-                )));
-            }
-        }
-        Ok(())
     }
 }
 

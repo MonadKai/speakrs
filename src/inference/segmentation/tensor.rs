@@ -92,6 +92,19 @@ pub(super) fn padded_window<'a>(
         })
 }
 
+pub(super) fn first_output<T>(
+    outputs: impl IntoIterator<Item = T>,
+    context: &'static str,
+) -> Result<T, SegmentationError> {
+    outputs
+        .into_iter()
+        .next()
+        .ok_or_else(|| SegmentationError::MalformedOutput {
+            context,
+            message: "missing output tensor".to_owned(),
+        })
+}
+
 #[cfg(feature = "coreml")]
 pub(super) fn segmentation_array(
     frames: usize,
@@ -119,5 +132,20 @@ pub(super) fn segmentation_array_from_slice(
 pub(super) fn worker_panic(worker: &'static str) -> SegmentationError {
     SegmentationError::WorkerPanic {
         worker: worker.to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::first_output;
+
+    #[test]
+    fn first_output_reports_missing_tensor() {
+        let error = first_output(Vec::<()>::new(), "segmentation test").unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "segmentation test: missing output tensor"
+        );
     }
 }

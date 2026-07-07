@@ -2,10 +2,9 @@ mod support;
 
 use std::path::Path;
 
-use speakrs::pipeline::{DiarizationPipeline, FRAME_DURATION_SECONDS, FRAME_STEP_SECONDS};
-use speakrs::segment::to_segments;
+use speakrs::{ExecutionMode, OwnedDiarizationPipeline};
 
-use support::{ExampleResult, load_models, load_wav_samples};
+use support::{ExampleResult, load_wav_samples};
 
 fn main() -> ExampleResult<()> {
     support::init_tracing();
@@ -18,15 +17,10 @@ fn main() -> ExampleResult<()> {
     let models_dir = Path::new(&args[1]);
     let audio_path = Path::new(&args[2]);
 
-    let mut models = load_models(models_dir)?;
     let audio = load_wav_samples(audio_path)?;
-    let mut pipeline = DiarizationPipeline::new(&mut models.0, &mut models.1, models_dir)?;
+    let mut pipeline = OwnedDiarizationPipeline::from_dir(models_dir, ExecutionMode::Cpu)?;
     let result = pipeline.run(&audio)?;
-    let segments = to_segments(
-        &result.discrete_diarization,
-        FRAME_STEP_SECONDS,
-        FRAME_DURATION_SECONDS,
-    );
+    let segments = result.discrete_diarization.to_segments();
 
     println!("start\tend\tspeaker");
     for segment in segments {

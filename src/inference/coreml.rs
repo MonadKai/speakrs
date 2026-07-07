@@ -296,3 +296,63 @@ impl SharedCoreMlModel {
         extract_output(&output_array)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    use super::{CachedInputShape, CoreMlModel, GpuPrecision, SharedCoreMlModel};
+
+    fn fixture_model_path(name: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("fixtures")
+            .join("models")
+            .join(name)
+    }
+
+    #[test]
+    fn shared_cached_prediction_handles_concurrent_calls_when_bundle_available() {
+        let model_path = fixture_model_path("segmentation-3.0.mlmodelc");
+        if !model_path.exists() {
+            eprintln!(
+                "skipping CoreML cached prediction stress test; missing {}",
+                model_path.display()
+            );
+            return;
+        }
+
+        let model = Arc::new(
+            SharedCoreMlModel::load(
+                &model_path,
+                CoreMlModel::default_compute_units(),
+                "output",
+                GpuPrecision::Low,
+            )
+            .unwrap(),
+        );
+        let cached_shape = Arc::new(CachedInputShape::new("input", &[1, 1, 160_000]));
+        let input = Arc::new(vec![0.0_f32; 160_000]);
+
+        let handles: Vec<_> = (0..4)
+            .map(|_| {
+                let model = Arc::clone(&model);
+                let cached_shape = Arc::clone(&cached_shape);
+                let input = Arc::clone(&input);
+                std::thread::spawn(move || {
+                    for _ in 0..4 {
+                        let (data, output_shape) = model
+                            .predict_cached(&[(&*cached_shape, input.as_slice())])
+                            .unwrap();
+                        assert!(!data.is_empty());
+                        assert_eq!(output_shape.len(), 3);
+                    }
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+    }
+}

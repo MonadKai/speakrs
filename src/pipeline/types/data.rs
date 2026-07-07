@@ -89,8 +89,16 @@ impl DiscreteDiarization {
         crate::reconstruct::make_exclusive(&mut self.0);
     }
 
-    /// Convert frame activations to time-stamped speaker segments
-    pub fn to_segments(
+    /// Convert frame activations to time-stamped speaker segments using default frame timing.
+    pub fn to_segments(&self) -> Vec<crate::segment::Segment> {
+        self.to_segments_with(
+            crate::pipeline::FRAME_STEP_SECONDS,
+            crate::pipeline::FRAME_DURATION_SECONDS,
+        )
+    }
+
+    /// Convert frame activations to time-stamped speaker segments using custom frame timing.
+    pub fn to_segments_with(
         &self,
         frame_step_seconds: f64,
         frame_duration_seconds: f64,

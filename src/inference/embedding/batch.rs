@@ -6,7 +6,7 @@ use super::tensor::{array2_slice, array3_slice};
 use super::{
     EmbeddingModel, FBANK_FEATURES, FBANK_FRAMES, MULTI_MASK_BATCH_SIZE, MaskedEmbeddingInput,
     NUM_SPEAKERS, PRIMARY_BATCH_SIZE, SplitTailInput, array2_from_shape_vec, array2_slice_mut,
-    array3_slice_mut, select_mask,
+    array3_slice_mut, first_output, select_mask,
 };
 
 impl EmbeddingModel {
@@ -53,7 +53,8 @@ impl EmbeddingModel {
             } else {
                 sess.run(ort_inputs)?
             };
-            let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+            let output = first_output(outputs.values(), "primary embedding batch output")?;
+            let (_shape, data) = output.try_extract_tensor::<f32>()?;
             let n = inputs.len();
             let mut result = Array2::<f32>::zeros((n, 256));
             array2_slice_mut(&mut result, "batched embedding output")?
@@ -151,7 +152,8 @@ impl EmbeddingModel {
                 .as_mut()
                 .ok_or_else(|| ort::Error::new("missing multi-mask batched session"))?
                 .run(ort::inputs!["fbank" => fbank_tensor, "masks" => masks_tensor])?;
-            let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+            let output = first_output(outputs.values(), "multi-mask batched output")?;
+            let (_shape, data) = output.try_extract_tensor::<f32>()?;
             let batch = array2_from_shape_vec(
                 full_mask_batch,
                 256,
@@ -181,7 +183,8 @@ impl EmbeddingModel {
                     .as_mut()
                     .ok_or_else(|| ort::Error::new("missing multi-mask session"))?
                     .run(ort::inputs!["fbank" => fbank_tensor, "masks" => masks_tensor])?;
-                let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+                let output = first_output(outputs.values(), "multi-mask output")?;
+                let (_shape, data) = output.try_extract_tensor::<f32>()?;
                 for (local_idx, row_idx) in (mask_start..mask_end).enumerate() {
                     let start = local_idx * 256;
                     all_embeddings
@@ -269,7 +272,8 @@ impl EmbeddingModel {
             .as_mut()
             .ok_or_else(|| ort::Error::new("missing primary tail batched session"))?
             .run(ort::inputs!["fbank" => fbank_tensor, "weights" => weights_tensor])?;
-        let (_shape, data) = outputs[0].try_extract_tensor::<f32>()?;
+        let output = first_output(outputs.values(), "primary tail batched output")?;
+        let (_shape, data) = output.try_extract_tensor::<f32>()?;
         let batch = array2_from_shape_vec(
             PRIMARY_BATCH_SIZE,
             256,

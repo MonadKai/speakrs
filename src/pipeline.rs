@@ -1,4 +1,7 @@
 mod config;
+pub use crate::binarize::BinarizeConfig;
+pub use crate::clustering::ahc::AhcConfig;
+pub use crate::clustering::vbx::VbxConfig;
 pub(crate) use config::MIN_SPEAKER_ACTIVITY;
 pub use config::{
     COREML_SEGMENTATION_STEP_SECONDS, CUDA_SEGMENTATION_STEP_SECONDS,
