@@ -4,7 +4,7 @@ use ort::value::TensorRef;
 use tracing::debug;
 
 use super::{PRIMARY_BATCH_SIZE, SegmentationError, SegmentationModel};
-use crate::inference::segmentation::tensor::{SegmentationWindows, first_output};
+use crate::inference::segmentation::tensor::{SegmentationWindows, first_output, output_shape3};
 
 impl SegmentationModel {
     /// Run segmentation on audio, streaming raw logits through a channel
@@ -149,8 +149,7 @@ impl SegmentationModel {
         let output = first_output(outputs.values(), "segmentation window output")?;
         let (shape, data) = output.try_extract_tensor::<f32>()?;
 
-        let frames = shape[1] as usize;
-        let classes = shape[2] as usize;
+        let (_batch, frames, classes) = output_shape3(shape, "segmentation window output")?;
 
         Array2::from_shape_vec((frames, classes), data.to_vec()).map_err(|error| {
             SegmentationError::MalformedOutput {
@@ -188,10 +187,24 @@ impl SegmentationModel {
         let output = first_output(outputs.values(), "segmentation batch output")?;
         let (shape, data) = output.try_extract_tensor::<f32>()?;
 
-        let batch = shape[0] as usize;
-        let frames = shape[1] as usize;
-        let classes = shape[2] as usize;
+        let (batch, frames, classes) = output_shape3(shape, "segmentation batch output")?;
         let stride = frames * classes;
+        let expected_len =
+            batch
+                .checked_mul(stride)
+                .ok_or_else(|| SegmentationError::MalformedOutput {
+                    context: "segmentation batch output",
+                    message: format!("output shape {shape} exceeded addressable memory"),
+                })?;
+        if data.len() != expected_len {
+            return Err(SegmentationError::MalformedOutput {
+                context: "segmentation batch output",
+                message: format!(
+                    "shape {shape} expected {expected_len} values, got {}",
+                    data.len()
+                ),
+            });
+        }
 
         (0..batch)
             .map(|batch_idx| {

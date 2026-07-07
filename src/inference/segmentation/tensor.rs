@@ -3,6 +3,8 @@ use ndarray::{Array2, Array3};
 
 use super::SegmentationError;
 
+pub(super) type OutputShape3 = (usize, usize, usize);
+
 pub(super) struct SegmentationWindows<'a> {
     audio: &'a [f32],
     offsets: Vec<usize>,
@@ -105,6 +107,30 @@ pub(super) fn first_output<T>(
         })
 }
 
+pub(super) fn output_shape3(
+    shape: &ort::value::Shape,
+    context: &'static str,
+) -> Result<OutputShape3, SegmentationError> {
+    let [batch, frames, classes]: [i64; 3] =
+        shape
+            .as_ref()
+            .try_into()
+            .map_err(|_| SegmentationError::MalformedOutput {
+                context,
+                message: format!("expected rank 3 output, got shape {shape}"),
+            })?;
+
+    let dims = [batch, frames, classes];
+    if dims.iter().any(|dim| *dim < 0) {
+        return Err(SegmentationError::MalformedOutput {
+            context,
+            message: format!("expected non-negative output dimensions, got shape {shape}"),
+        });
+    }
+
+    Ok((batch as usize, frames as usize, classes as usize))
+}
+
 #[cfg(feature = "coreml")]
 pub(super) fn segmentation_array(
     frames: usize,
@@ -137,7 +163,7 @@ pub(super) fn worker_panic(worker: &'static str) -> SegmentationError {
 
 #[cfg(test)]
 mod tests {
-    use super::first_output;
+    use super::{first_output, output_shape3};
 
     #[test]
     fn first_output_reports_missing_tensor() {
@@ -146,6 +172,17 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "segmentation test: missing output tensor"
+        );
+    }
+
+    #[test]
+    fn output_shape3_reports_low_rank_tensor() {
+        let shape = ort::value::Shape::from([10_i64, 3]);
+        let error = output_shape3(&shape, "segmentation test").unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "segmentation test: expected rank 3 output, got shape [10, 3]"
         );
     }
 }
