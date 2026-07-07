@@ -2,8 +2,10 @@
 
 ## [unreleased]
 
+## [0.5.0] - 2026-07-07
+
 - Prepare the 0.5.0 breaking API cleanup: expose tuning config types, make selected public enums non-exhaustive, rename custom segment conversion to `to_segments_with`, and make `Segment` display human-readable text instead of RTTM.
-- Harden queue terminal handling and malformed inference-output paths so unexpected terminal states and missing ORT outputs return errors instead of panicking.
+- Return errors instead of panicking when queues end unexpectedly or ORT returns malformed inference output.
 - Modernize shipped examples around `OwnedDiarizationPipeline`/`PipelineBuilder`, including a queued sender-clone example.
 - Add dependency policy, MSRV, no-default-features, docs, README, package, and release-readiness checks.
 
