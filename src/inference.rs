@@ -362,6 +362,13 @@ impl OrtRuntimeLoader {
         }
 
         let candidates = self.candidate_paths();
+        #[cfg(target_os = "android")]
+        for path in &candidates {
+            if path == Path::new(self.library_name) && self.validate_library(path).is_ok() {
+                return Ok(path.clone());
+            }
+        }
+
         candidates
             .iter()
             .find(|path| path.exists())
@@ -391,6 +398,9 @@ impl OrtRuntimeLoader {
             candidates.push(cwd.join("target/release").join(self.library_name));
             candidates.push(cwd.join("target/release/deps").join(self.library_name));
         }
+
+        #[cfg(target_os = "android")]
+        candidates.push(PathBuf::from(self.library_name));
 
         dedup_paths(candidates)
     }

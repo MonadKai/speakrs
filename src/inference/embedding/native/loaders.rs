@@ -368,4 +368,25 @@ mod tests {
             }
         ));
     }
+
+    #[cfg(feature = "load-dynamic")]
+    #[test]
+    fn coreml_constructor_reports_missing_native_asset_without_ort_runtime() {
+        let dir = TestDir::new("emb-coreml-no-ort");
+        let model_path = dir.path().join("wespeaker-voxceleb-resnet34.onnx");
+        fs::write(&model_path, b"placeholder").unwrap();
+
+        let error = match EmbeddingModel::with_mode(&model_path, ExecutionMode::CoreMl) {
+            Ok(_) => panic!("missing compiled bundle should error"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(
+            error,
+            ModelLoadError::MissingNativeAsset {
+                mode: ExecutionMode::CoreMl,
+                ..
+            }
+        ));
+    }
 }

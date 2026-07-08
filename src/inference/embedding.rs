@@ -71,7 +71,7 @@ struct EmbeddingMeta {
 }
 
 struct OrtEmbeddingState {
-    session: Session,
+    session: Option<Session>,
     primary_batched_session: Option<Session>,
     split_fbank_session: Option<Session>,
     split_fbank_batched_session: Option<Session>,

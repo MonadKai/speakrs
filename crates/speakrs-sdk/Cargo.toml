@@ -1,0 +1,32 @@
+[package]
+name = "speakrs-sdk"
+version = "0.5.0"
+edition = "2024"
+rust-version = "1.88"
+description = "Shared binding-safe SDK substrate for speakrs"
+license = "Apache-2.0"
+repository = "https://github.com/avencera/speakrs"
+authors = ["Praveen Perera"]
+publish = false
+
+[features]
+coreml = ["pipeline", "speakrs/coreml"]
+ios-coreml = ["dep:speakrs", "speakrs/coreml", "speakrs/load-dynamic", "speakrs/pure-linalg"]
+online = ["dep:hf-hub", "hf-hub/ureq"]
+pipeline = ["dep:speakrs", "speakrs/default-linalg"]
+android-pipeline = ["dep:speakrs", "speakrs/pure-linalg"]
+android-bundled = ["android-pipeline", "speakrs/load-dynamic"]
+android-lean = ["android-pipeline", "speakrs/load-dynamic"]
+cuda-pipeline = ["dep:speakrs", "speakrs/default-linalg", "speakrs/cuda"]
+migraphx-pipeline = ["dep:speakrs", "speakrs/default-linalg", "speakrs/migraphx"]
+
+[dependencies]
+hf-hub = { version = "0.5", optional = true, default-features = false }
+rubato = { version = "3.0.0", default-features = false }
+sha2 = "0.10.9"
+speakrs = { path = "../..", optional = true, default-features = false }
+symphonia = { version = "0.6.0", default-features = false, features = ["flac", "mp3", "pcm", "wav"] }
+thiserror = "2.0.18"
+
+[dev-dependencies]
+hound = "3.5.1"

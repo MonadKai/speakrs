@@ -55,7 +55,7 @@ const LARGE_BATCH_SIZE: usize = 64;
 /// Sliding-window segmentation model (pyannote segmentation-3.0)
 pub struct SegmentationModel {
     mode: ExecutionMode,
-    session: Session,
+    session: Option<Session>,
     primary_batched_session: Option<Session>,
     #[cfg(feature = "coreml")]
     native_session: Option<SharedCoreMlModel>,
@@ -93,7 +93,14 @@ impl SegmentationModel {
         mode: ExecutionMode,
     ) -> Result<Self, ModelLoadError> {
         mode.validate()?;
-        ensure_ort_ready()?;
+        #[cfg(feature = "coreml")]
+        let use_native_coreml = mode.is_coreml();
+        #[cfg(not(feature = "coreml"))]
+        let use_native_coreml = false;
+
+        if !use_native_coreml {
+            ensure_ort_ready()?;
+        }
 
         let model_path = model_path.as_ref();
         let sample_rate = 16000;
@@ -114,9 +121,16 @@ impl SegmentationModel {
             }};
         }
 
-        let (session, session_elapsed) = timed!(Self::build_session(model_path, mode)?);
+        let (session, session_elapsed) = if use_native_coreml {
+            (None, std::time::Duration::ZERO)
+        } else {
+            let (session, elapsed) = timed!(Self::build_session(model_path, mode)?);
+            (Some(session), elapsed)
+        };
         let (primary_batched_session, primary_batched_elapsed) = timed!(
-            batched_model_path(model_path, PRIMARY_BATCH_SIZE)
+            (!use_native_coreml)
+                .then(|| batched_model_path(model_path, PRIMARY_BATCH_SIZE))
+                .flatten()
                 .filter(|path| path.exists())
                 .map(|path| Self::build_session(&path, mode))
                 .transpose()?

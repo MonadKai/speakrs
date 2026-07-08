@@ -40,6 +40,8 @@ impl EmbeddingModel {
         let outputs = self
             .ort
             .session
+            .as_mut()
+            .ok_or_else(|| ort::Error::new("missing primary embedding session"))?
             .run(ort::inputs!["waveform" => waveform_tensor, "weights" => weights_tensor])?;
         let output = first_output(outputs.values(), "masked embedding output")?;
         let (_shape, data) = output.try_extract_tensor::<f32>()?;

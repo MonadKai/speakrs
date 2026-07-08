@@ -1,0 +1,34 @@
+[package]
+name = "speakrs-ffi"
+version = "0.5.0"
+edition = "2024"
+rust-version = "1.88"
+description = "UniFFI bindings for speakrs mobile SDKs"
+license = "Apache-2.0"
+repository = "https://github.com/avencera/speakrs"
+authors = ["Praveen Perera"]
+publish = false
+
+[lib]
+name = "speakrs_ffi"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[features]
+default = ["online", "host-pipeline"]
+online = ["speakrs-sdk/online"]
+coreml = ["speakrs-sdk/coreml"]
+host-pipeline = ["speakrs-sdk/pipeline"]
+bundled-ort = ["speakrs-sdk/android-bundled"]
+lean-ort = ["speakrs-sdk/android-lean"]
+ios-coreml = ["speakrs-sdk/ios-coreml"]
+bindgen-cli = ["uniffi/cli"]
+
+[dependencies]
+speakrs-sdk = { path = "../speakrs-sdk" }
+thiserror = "2.0.18"
+uniffi = "0.32.0"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["bindgen-cli"]

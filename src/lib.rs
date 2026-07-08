@@ -171,7 +171,7 @@
 //! Common features:
 //!
 //! - `online` (default): model download via [`ModelManager`]
-//! - `coreml`: native CoreML backend on macOS
+//! - `coreml`: native CoreML backend on Apple platforms
 //! - `cuda`: NVIDIA CUDA backend via ONNX Runtime
 //! - `migraphx`: AMD GPU backend via ONNX Runtime MIGraphX
 //! - `load-dynamic`: load the ONNX Runtime library at startup instead of static linking
@@ -180,7 +180,7 @@
 //!
 //! - `x86_64` defaults to statically linked Intel MKL
 //! - non-`x86_64` defaults to statically linked OpenBLAS and needs a C toolchain
-//! - no-default builds must enable exactly one of `intel-mkl`, `openblas-static`, or `openblas-system`
+//! - no-default builds must enable exactly one linalg backend
 //!
 //! ```toml
 //! speakrs = { version = "0.5", default-features = false, features = ["online", "intel-mkl"] }
@@ -200,8 +200,8 @@
 //! - [`ModelManager`]: model download when `online` is enabled
 //! - [`Segment`]: a single speaker turn
 
-#[cfg(all(feature = "coreml", not(target_os = "macos")))]
-compile_error!("the `coreml` feature is only supported on macOS");
+#[cfg(all(feature = "coreml", not(any(target_os = "macos", target_os = "ios"))))]
+compile_error!("the `coreml` feature is only supported on Apple platforms");
 
 pub(crate) mod binarize;
 pub(crate) mod clustering;

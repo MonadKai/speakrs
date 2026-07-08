@@ -24,7 +24,14 @@ impl EmbeddingModel {
         config: &crate::pipeline::RuntimeConfig,
     ) -> Result<Self, ModelLoadError> {
         mode.validate()?;
-        ensure_ort_ready()?;
+        #[cfg(feature = "coreml")]
+        let use_native_coreml = mode.is_coreml();
+        #[cfg(not(feature = "coreml"))]
+        let use_native_coreml = false;
+
+        if !use_native_coreml {
+            ensure_ort_ready()?;
+        }
 
         let model_path = model_path.as_ref();
         LoadedSessions::load(model_path, mode, config)?.into_model(model_path, mode)

@@ -285,4 +285,25 @@ mod tests {
             }
         ));
     }
+
+    #[cfg(feature = "load-dynamic")]
+    #[test]
+    fn coreml_constructor_reports_missing_native_asset_without_ort_runtime() {
+        let dir = TestDir::new("seg-coreml-no-ort");
+        let model_path = dir.path().join("segmentation-3.0.onnx");
+        fs::write(&model_path, b"placeholder").unwrap();
+
+        let error = match SegmentationModel::with_mode(&model_path, 1.0, ExecutionMode::CoreMl) {
+            Ok(_) => panic!("missing compiled bundle should error"),
+            Err(error) => error,
+        };
+
+        assert!(matches!(
+            error,
+            ModelLoadError::MissingNativeAsset {
+                mode: ExecutionMode::CoreMl,
+                ..
+            }
+        ));
+    }
 }

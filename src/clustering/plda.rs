@@ -4,7 +4,7 @@ use std::path::Path;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Axis, s};
 use ndarray_npy::read_npy;
 
-use crate::linalg::{Eigh, Inverse, LinalgError, UPLO};
+use crate::linalg::{LinalgError, generalized_eigh_lower, inverse};
 use crate::utils::l2_normalize_rows_f64;
 
 /// PLDA transform computed entirely in f64 to match pyannote's numpy precision
@@ -29,7 +29,7 @@ impl PldaTransform {
         let raw_transform = read_array2_f64(models_dir.join("plda_tr.npy"))?;
         let psi = read_array1_f64(models_dir.join("plda_psi.npy"))?;
 
-        let precision_matrix = raw_transform.t().dot(&raw_transform).inv()?;
+        let precision_matrix = inverse(raw_transform.t().dot(&raw_transform))?;
 
         let mut tr_over_psi = raw_transform.t().to_owned();
         for (mut column, &psi_value) in tr_over_psi.columns_mut().into_iter().zip(psi.iter()) {
@@ -38,10 +38,10 @@ impl PldaTransform {
             }
             column /= psi_value;
         }
-        let between_class_covariance = tr_over_psi.dot(&raw_transform).inv()?;
+        let between_class_covariance = inverse(tr_over_psi.dot(&raw_transform))?;
 
-        let (eigenvalues, (eigenvectors, _)) =
-            (between_class_covariance, precision_matrix).eigh(UPLO::Lower)?;
+        let (eigenvalues, eigenvectors) =
+            generalized_eigh_lower(between_class_covariance, precision_matrix)?;
 
         let dim = lda.ncols();
         let mut phi = Array1::<f64>::zeros(dim);
@@ -125,7 +125,7 @@ fn read_array2_f64(path: impl AsRef<Path>) -> Result<Array2<f64>, PldaError> {
 #[derive(Debug)]
 pub enum PldaError {
     Io(ndarray_npy::ReadNpyError),
-    Linalg(LinalgError),
+    Linalg(String),
     InvalidPsi,
 }
 
@@ -149,7 +149,7 @@ impl From<ndarray_npy::ReadNpyError> for PldaError {
 
 impl From<LinalgError> for PldaError {
     fn from(value: LinalgError) -> Self {
-        Self::Linalg(value)
+        Self::Linalg(value.to_string())
     }
 }
 

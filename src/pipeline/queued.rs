@@ -21,6 +21,13 @@ const _: () = {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct QueuedDiarizationJobId(u64);
 
+impl QueuedDiarizationJobId {
+    /// Return the stable numeric queue job id
+    pub const fn as_u64(self) -> u64 {
+        self.0
+    }
+}
+
 /// A diarization request that owns its audio buffer
 pub struct QueuedDiarizationRequest {
     file_id: String,
@@ -373,6 +380,11 @@ mod tests {
 
         assert!(matches!(receiver.recv(), Err(QueueError::Closed)));
         assert!(matches!(receiver.try_recv(), Err(QueueError::Closed)));
+    }
+
+    #[test]
+    fn job_id_exposes_stable_numeric_value() {
+        assert_eq!(QueuedDiarizationJobId(42).as_u64(), 42);
     }
 
     #[test]

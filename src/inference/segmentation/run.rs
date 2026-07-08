@@ -27,7 +27,7 @@ impl SegmentationModel {
         let mut seg_batched = 0u32;
         let mut seg_single = 0u32;
 
-        let has_batched = self.primary_batched_session.is_some();
+        let has_batched = self.has_batched_session();
         let zeros = vec![0.0f32; self.window_samples];
 
         let mut next_idx = 0;
@@ -101,7 +101,7 @@ impl SegmentationModel {
 
         while next_idx < total_windows {
             let remaining = total_windows - next_idx;
-            if remaining >= PRIMARY_BATCH_SIZE && self.primary_batched_session.is_some() {
+            if remaining >= PRIMARY_BATCH_SIZE && self.has_batched_session() {
                 let batch: Vec<&[f32]> = (next_idx..next_idx + PRIMARY_BATCH_SIZE)
                     .map(|idx| windows.window(idx, "segmentation run batch window"))
                     .collect::<Result<_, _>>()
@@ -145,7 +145,11 @@ impl SegmentationModel {
             .assign(&ndarray::ArrayView1::from(window));
         let input_tensor = TensorRef::from_array_view(self.input_buffer.view())?;
 
-        let outputs = self.session.run(ort::inputs![input_tensor])?;
+        let outputs = self
+            .session
+            .as_mut()
+            .ok_or_else(|| ort::Error::new("missing primary segmentation session"))?
+            .run(ort::inputs![input_tensor])?;
         let output = first_output(outputs.values(), "segmentation window output")?;
         let (shape, data) = output.try_extract_tensor::<f32>()?;
 
@@ -216,5 +220,12 @@ impl SegmentationModel {
                     })
             })
             .collect::<Result<Vec<_>, _>>()
+    }
+
+    fn has_batched_session(&self) -> bool {
+        let has = self.primary_batched_session.is_some();
+        #[cfg(feature = "coreml")]
+        let has = has || self.native_batched_session.is_some();
+        has
     }
 }
