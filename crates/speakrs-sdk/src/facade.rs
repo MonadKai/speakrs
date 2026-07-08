@@ -3,7 +3,8 @@ use std::sync::{Mutex, MutexGuard};
 use std::time::Instant;
 
 use speakrs::pipeline::{
-    OwnedDiarizationPipeline, PipelineBuilder, QueueReceiver, QueueSender, QueuedDiarizationRequest,
+    OwnedDiarizationPipeline, PipelineBuilder, PipelineError, QueueReceiver, QueueSender,
+    QueuedDiarizationRequest,
 };
 
 use crate::audio::{decode_file_to_mono, decode_file_to_mono_16khz, resample_mono_to_16khz};
@@ -261,22 +262,20 @@ impl SdkQueue {
 
 impl SdkError {
     pub(crate) fn from_pipeline_error(error: speakrs::pipeline::PipelineError) -> Self {
-        let message = error.to_string();
-        let category = if message.contains("requires the `") {
-            SdkErrorCategory::UnsupportedRuntime
-        } else {
-            SdkErrorCategory::Pipeline
+        let category = match &error {
+            PipelineError::UnsupportedExecutionMode(_) => SdkErrorCategory::UnsupportedRuntime,
+            _ => SdkErrorCategory::Pipeline,
         };
 
-        Self::new(category, category.code(), message)
+        Self::new(category, category.code(), error.to_string())
     }
 
     pub(crate) fn from_audio_error(error: crate::audio::AudioDecodeError) -> Self {
-        Self::new(
-            SdkErrorCategory::AudioDecode,
-            SdkErrorCategory::AudioDecode.code(),
-            error.to_string(),
-        )
+        let category = match &error {
+            crate::audio::AudioDecodeError::Resample(_) => SdkErrorCategory::AudioResample,
+            _ => SdkErrorCategory::AudioDecode,
+        };
+        Self::new(category, category.code(), error.to_string())
     }
 
     pub(crate) fn from_queue_error(error: speakrs::pipeline::QueueError) -> Self {
@@ -398,6 +397,15 @@ mod tests {
 
         assert_eq!(err.category, SdkErrorCategory::Queue);
         assert_eq!(err.code, "queue");
+    }
+
+    #[test]
+    fn resample_errors_map_to_stable_resample_category() {
+        let err =
+            SdkError::from_audio_error(crate::audio::AudioDecodeError::Resample("bad rate".into()));
+
+        assert_eq!(err.category, SdkErrorCategory::AudioResample);
+        assert_eq!(err.code, "audio_resample");
     }
 
     #[test]

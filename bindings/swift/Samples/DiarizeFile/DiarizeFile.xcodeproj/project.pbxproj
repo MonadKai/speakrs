@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		0D6BD312A9D1D943783D307A /* Speakrs in Frameworks */ = {isa = PBXBuildFile; productRef = 7BBAB348E19DBADB245457A9 /* Speakrs */; };
+		4771CD49C8F8758B38DB0832 /* test_short.wav in Resources */ = {isa = PBXBuildFile; fileRef = 6A37FF1F1ACD2DEE43318E66 /* test_short.wav */; };
 		B592D6D73F5EA0EE56887C1A /* DiarizeFileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CF962B54A1AD990809F88C /* DiarizeFileApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		09CF962B54A1AD990809F88C /* DiarizeFileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiarizeFileApp.swift; sourceTree = "<group>"; };
+		6A37FF1F1ACD2DEE43318E66 /* test_short.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = test_short.wav; sourceTree = "<group>"; };
 		AA3D9E434BE32E184E098BD4 /* DiarizeFile.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = DiarizeFile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3A264F0B012BF171E5810FB /* swift */ = {isa = PBXFileReference; lastKnownFileType = folder; name = swift; path = ../..; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -45,6 +47,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		947215E4D960FE5AF9B5AC21 /* fixtures */ = {
+			isa = PBXGroup;
+			children = (
+				6A37FF1F1ACD2DEE43318E66 /* test_short.wav */,
+			);
+			name = fixtures;
+			path = ../../../../fixtures;
+			sourceTree = "<group>";
+		};
 		9CDCB94050051759084352F8 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
@@ -56,6 +67,7 @@
 		CB3F854616A233D3E0ED5649 = {
 			isa = PBXGroup;
 			children = (
+				947215E4D960FE5AF9B5AC21 /* fixtures */,
 				229D1E0F7031D1BD7F13A1DE /* Packages */,
 				9CDCB94050051759084352F8 /* Sources */,
 				43B4B71759F1B5082F69B728 /* Products */,
@@ -70,6 +82,7 @@
 			buildConfigurationList = 24C22FD8CB74E678BF17BA25 /* Build configuration list for PBXNativeTarget "DiarizeFile" */;
 			buildPhases = (
 				6CE72F90292B4F337F2EE4B9 /* Sources */,
+				7AC35C62B3AFA3599852A785 /* Resources */,
 				807EAA4675D7F88A51CCD137 /* Frameworks */,
 			);
 			buildRules = (
@@ -116,6 +129,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7AC35C62B3AFA3599852A785 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4771CD49C8F8758B38DB0832 /* test_short.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		6CE72F90292B4F337F2EE4B9 /* Sources */ = {

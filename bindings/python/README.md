@@ -26,8 +26,8 @@ Linux wheel builds:
 
 ```sh
 cd bindings/python/speakrs-cuda
-uvx maturin build --release -i python3.12 --compatibility manylinux_2_28
+uvx maturin build --release -i python3.12 --compatibility linux
 
 cd ../speakrs-migraphx
-uvx maturin build --release -i python3.12 --compatibility manylinux_2_28
+uvx maturin build --release -i python3.12 --compatibility linux
 ```

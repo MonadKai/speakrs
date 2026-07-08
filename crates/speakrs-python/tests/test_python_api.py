@@ -90,3 +90,22 @@ def test_cli_diarizes_fixture(capsys):
 
     assert exit_code == 0
     assert captured.err == ""
+
+
+def test_cli_prints_clean_speakrs_errors(capsys, tmp_path):
+    from speakrs.cli import main
+
+    exit_code = main(
+        [
+            str(REPO_ROOT / "fixtures" / "test_short.wav"),
+            "--model-dir",
+            str(tmp_path / "missing-models"),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert captured.out == ""
+    assert captured.err.startswith("error: ")
+    assert "model manifest is missing" in captured.err
+    assert "Traceback" not in captured.err

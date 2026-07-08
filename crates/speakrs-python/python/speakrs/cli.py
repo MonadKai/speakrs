@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 from typing import Sequence
 
-from . import ExecutionMode, Pipeline, prepare
+from . import ExecutionMode, Pipeline, SpeakrsError, prepare
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -16,15 +17,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--file-id", default="file1")
     args = parser.parse_args(argv)
 
-    prepared = prepare(
-        ExecutionMode(args.mode),
-        cache_dir=args.cache_dir,
-        model_dir=args.model_dir,
-    )
-    pipeline = Pipeline.from_prepared(prepared, ExecutionMode(args.mode))
-    result = pipeline.diarize_file(args.audio, file_id=args.file_id)
-    print(result.rttm, end="")
-    return 0
+    try:
+        prepared = prepare(
+            ExecutionMode(args.mode),
+            cache_dir=args.cache_dir,
+            model_dir=args.model_dir,
+        )
+        pipeline = Pipeline.from_prepared(prepared, ExecutionMode(args.mode))
+        result = pipeline.diarize_file(args.audio, file_id=args.file_id)
+        print(result.rttm, end="")
+        return 0
+    except SpeakrsError as exc:
+        message = exc.args[-1] if exc.args else str(exc)
+        print(f"error: {message}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

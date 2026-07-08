@@ -13,8 +13,8 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: Sources
-    resources:
       - path: ../../../../fixtures/test_short.wav
+        buildPhase: resources
     dependencies:
       - package: Speakrs
     settings:

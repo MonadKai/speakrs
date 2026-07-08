@@ -1,5 +1,5 @@
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 use thiserror::Error;
@@ -227,6 +227,14 @@ impl ModelStore {
     }
 
     pub fn cleanup_revision(&self, revision: &str) -> Result<bool, ModelPrepareError> {
+        if !is_safe_cache_revision(revision) {
+            return Err(ModelPrepareError::CacheCleanup {
+                path: PathBuf::from(revision),
+                message: "invalid revision: contains path separators or traversal components"
+                    .to_string(),
+            });
+        }
+
         let path = self
             .cache_dir
             .join(cache_repo_dir(self.plan.repository))
@@ -368,6 +376,15 @@ pub struct ModelManifestEntry {
 
 fn cache_repo_dir(repository: &str) -> String {
     repository.replace('/', "--")
+}
+
+fn is_safe_cache_revision(revision: &str) -> bool {
+    if revision.contains('\\') {
+        return false;
+    }
+
+    let mut components = Path::new(revision).components();
+    matches!(components.next(), Some(Component::Normal(_))) && components.next().is_none()
 }
 
 fn mlmodelc_files(name: &str) -> Vec<String> {
@@ -762,6 +779,24 @@ mod tests {
 
         let remaining = store.list_cache().unwrap();
         assert_eq!(remaining.len(), 1);
+        let _ = std::fs::remove_dir_all(cache_dir);
+    }
+
+    #[test]
+    fn model_store_rejects_cleanup_revision_traversal() {
+        let cache_dir = temp_model_dir("cleanup-traversal");
+        let store = ModelStore::new(&cache_dir);
+        let protected_dir = cache_dir.join("protected");
+        std::fs::create_dir_all(&protected_dir).unwrap();
+
+        let err = store.cleanup_revision("../protected").unwrap_err();
+
+        assert!(matches!(err, ModelPrepareError::CacheCleanup { .. }));
+        assert!(protected_dir.is_dir());
+
+        let err = store.cleanup_revision(r"..\protected").unwrap_err();
+        assert!(matches!(err, ModelPrepareError::CacheCleanup { .. }));
+        assert!(protected_dir.is_dir());
         let _ = std::fs::remove_dir_all(cache_dir);
     }
 
