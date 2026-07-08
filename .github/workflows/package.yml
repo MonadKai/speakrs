@@ -1,7 +1,18 @@
 name: Package
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      gpu_python_package:
+        description: GPU Python package smoke to run on matching self-hosted hardware
+        required: true
+        default: none
+        type: choice
+        options:
+          - none
+          - cuda
+          - migraphx
+          - both
   push:
     branches:
       - master
@@ -90,3 +101,293 @@ jobs:
           check_consumer default "{ path = \"$package_path\" }"
           check_consumer load-dynamic "{ path = \"$package_path\", features = [\"load-dynamic\"] }"
           check_consumer custom-linalg "{ path = \"$package_path\", default-features = false, features = [\"online\", \"intel-mkl\"] }"
+
+  rust-api-docs:
+    name: Rust API docs
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+          prefix-key: v1-rust-api-docs
+
+      - name: Generate Rust API docs
+        run: cargo doc --workspace --no-deps
+
+      - name: Upload Rust API docs
+        uses: actions/upload-artifact@v6
+        with:
+          name: speakrs-rust-api-docs
+          path: target/doc
+
+  python-wheels:
+    name: Python wheels (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - macos-26
+          - macos-26-intel
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+          prefix-key: v1-rust-python-wheels-${{ matrix.os }}
+
+      - name: Build Python wheels
+        uses: pypa/cibuildwheel@v4.1.0
+        with:
+          package-dir: crates/speakrs-python
+          output-dir: wheelhouse
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_BUILD_FRONTEND: "build[uv]"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.14"
+          CIBW_TEST_COMMAND: "python -c \"import speakrs; assert speakrs.__version__ == '0.5.0'; assert 'segmentation-3.0.onnx' in speakrs.required_model_files()\""
+
+      - name: Upload Python wheels
+        uses: actions/upload-artifact@v6
+        with:
+          name: speakrs-python-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  android:
+    name: Android AARs and samples
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Android Rust targets
+        run: rustup target add aarch64-linux-android x86_64-linux-android
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and NDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "ndk;29.0.14206865"
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+          prefix-key: v1-rust-android-lean
+
+      - name: Build and publish Android artifacts locally
+        working-directory: bindings/android
+        run: ./gradlew :speakrs:publishLeanReleasePublicationToMavenLocal :speakrs:publishBundledOrtReleasePublicationToMavenLocal :sample:assembleLeanRelease :sample:assembleBundledOrtRelease
+
+      - name: Inspect Android artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          lean_aar="bindings/android/speakrs/build/outputs/aar/speakrs-lean-release.aar"
+          bundled_aar="bindings/android/speakrs/build/outputs/aar/speakrs-bundledOrt-release.aar"
+          lean_apk="bindings/android/sample/build/outputs/apk/lean/release/sample-lean-release-unsigned.apk"
+          bundled_apk="bindings/android/sample/build/outputs/apk/bundledOrt/release/sample-bundledOrt-release-unsigned.apk"
+          bundled_pom="$HOME/.m2/repository/com/avencera/speakrs-bundled-ort/0.5.0/speakrs-bundled-ort-0.5.0.pom"
+          test -s "$lean_aar"
+          test -s "$bundled_aar"
+          test -s "$lean_apk"
+          test -s "$bundled_apk"
+          unzip -l "$lean_aar" | grep 'jni/arm64-v8a/libspeakrs_ffi.so'
+          unzip -l "$lean_aar" | grep 'jni/x86_64/libspeakrs_ffi.so'
+          unzip -l "$bundled_aar" | grep 'jni/arm64-v8a/libspeakrs_ffi.so'
+          unzip -l "$bundled_aar" | grep 'jni/x86_64/libspeakrs_ffi.so'
+          unzip -l "$lean_apk" | grep 'assets/test_short.wav'
+          unzip -l "$bundled_apk" | grep 'assets/test_short.wav'
+          unzip -l "$bundled_apk" | grep 'lib/arm64-v8a/libonnxruntime.so'
+          unzip -l "$bundled_apk" | grep 'lib/x86_64/libonnxruntime.so'
+          grep 'com.microsoft.onnxruntime' "$bundled_pom"
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: speakrs-android
+          path: |
+            bindings/android/speakrs/build/outputs/aar/*.aar
+            bindings/android/sample/build/outputs/apk/lean/release/*.apk
+            bindings/android/sample/build/outputs/apk/bundledOrt/release/*.apk
+
+  swift-xcframework:
+    name: Swift XCFramework and sample
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install iOS Rust targets
+        run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim x86_64-apple-ios
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+          prefix-key: v1-rust-swift-xcframework
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build XCFramework
+        run: ./bindings/swift/scripts/build-xcframework.sh
+
+      - name: Package Swift binary artifact
+        run: ./bindings/swift/scripts/package-xcframework.sh
+
+      - name: Build Swift package for simulator
+        run: xcodebuild -quiet -scheme Speakrs -destination 'generic/platform=iOS Simulator' -sdk iphonesimulator -derivedDataPath bindings/swift/build/xcode build
+
+      - name: Build Swift package for device
+        run: xcodebuild -quiet -scheme Speakrs -destination 'generic/platform=iOS' -sdk iphoneos -derivedDataPath bindings/swift/build/xcode-device build
+
+      - name: Generate sample project
+        working-directory: bindings/swift/Samples/DiarizeFile
+        run: xcodegen generate
+
+      - name: Build sample for simulator
+        working-directory: bindings/swift/Samples/DiarizeFile
+        run: xcodebuild -quiet -project DiarizeFile.xcodeproj -scheme DiarizeFile -destination 'generic/platform=iOS Simulator' -sdk iphonesimulator -derivedDataPath build/xcode build
+
+      - name: Build sample for device
+        working-directory: bindings/swift/Samples/DiarizeFile
+        run: xcodebuild -quiet -project DiarizeFile.xcodeproj -scheme DiarizeFile -destination 'generic/platform=iOS' -sdk iphoneos -derivedDataPath build/xcode-device build
+
+      - name: Upload Swift XCFramework
+        uses: actions/upload-artifact@v6
+        with:
+          name: speakrs-swift-xcframework
+          path: |
+            bindings/swift/artifacts/speakrs_ffiFFI.xcframework
+            bindings/swift/artifacts/speakrs_ffiFFI.xcframework.zip
+            bindings/swift/artifacts/speakrs_ffiFFI.xcframework.zip.checksum
+
+  python-cuda-wheel:
+    name: Python CUDA wheel smoke
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.gpu_python_package == 'cuda' || inputs.gpu_python_package == 'both') }}
+    runs-on: [self-hosted, linux, x64, cuda]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python build tools
+        run: python -m pip install --upgrade pip uv
+
+      - name: Build CUDA wheel
+        working-directory: bindings/python/speakrs-cuda
+        run: uvx maturin build --release -i python3.12 --compatibility linux --out ../../../wheelhouse/speakrs-cuda
+
+      - name: Install CUDA wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install wheelhouse/speakrs-cuda/*.whl
+
+      - name: CUDA fixture smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          import speakrs
+
+          cache_dir = Path("_scratch/gpu-cuda-cache")
+          cache_dir.mkdir(parents=True, exist_ok=True)
+          prepared = speakrs.prepare(speakrs.ExecutionMode.CUDA, cache_dir=cache_dir)
+          pipeline = speakrs.Pipeline.from_prepared(prepared, speakrs.ExecutionMode.CUDA)
+          result = pipeline.diarize_file("fixtures/test_short.wav", file_id="test_short")
+          assert result.duration > 0
+          assert result.mode == "CUDA"
+          PY
+
+      - name: Upload CUDA wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: speakrs-cuda-wheel
+          path: wheelhouse/speakrs-cuda/*.whl
+
+  python-migraphx-wheel:
+    name: Python MIGraphX wheel smoke
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.gpu_python_package == 'migraphx' || inputs.gpu_python_package == 'both') }}
+    runs-on: [self-hosted, linux, x64, migraphx]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python build tools
+        run: python -m pip install --upgrade pip uv
+
+      - name: Build MIGraphX wheel
+        working-directory: bindings/python/speakrs-migraphx
+        run: uvx maturin build --release -i python3.12 --compatibility linux --out ../../../wheelhouse/speakrs-migraphx
+
+      - name: Install MIGraphX wheel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install wheelhouse/speakrs-migraphx/*.whl
+
+      - name: MIGraphX fixture smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          import speakrs
+
+          cache_dir = Path("_scratch/gpu-migraphx-cache")
+          cache_dir.mkdir(parents=True, exist_ok=True)
+          prepared = speakrs.prepare(speakrs.ExecutionMode.MIGraphX, cache_dir=cache_dir)
+          pipeline = speakrs.Pipeline.from_prepared(prepared, speakrs.ExecutionMode.MIGraphX)
+          result = pipeline.diarize_file("fixtures/test_short.wav", file_id="test_short")
+          assert result.duration > 0
+          assert result.mode == "MIGraphX"
+          PY
+
+      - name: Upload MIGraphX wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: speakrs-migraphx-wheel
+          path: wheelhouse/speakrs-migraphx/*.whl
