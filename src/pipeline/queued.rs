@@ -52,6 +52,8 @@ pub struct QueuedDiarizationResult {
     pub job_id: QueuedDiarizationJobId,
     /// The file identifier from the original request
     pub file_id: String,
+    /// The duration of the submitted 16 kHz mono audio in seconds
+    pub duration: f64,
     /// Diarization result, or an error if this file failed
     pub result: Result<DiarizationResult, PipelineError>,
 }
@@ -86,6 +88,7 @@ impl QueueError {
 struct WorkerRequest {
     job_id: QueuedDiarizationJobId,
     file_id: String,
+    duration: f64,
     audio: Vec<f32>,
 }
 
@@ -151,11 +154,13 @@ impl QueueSender {
         request: QueuedDiarizationRequest,
     ) -> Result<QueuedDiarizationJobId, QueueError> {
         let job_id = QueuedDiarizationJobId(self.next_job_id.fetch_add(1, Ordering::Relaxed));
+        let duration = request.audio.len() as f64 / 16_000.0;
 
         self.request_tx
             .send(WorkerRequest {
                 job_id,
                 file_id: request.file_id,
+                duration,
                 audio: request.audio,
             })
             .map_err(|_| QueueError::WorkerGone)?;
@@ -345,6 +350,7 @@ fn process_batch(
             .map(|(req, result)| QueuedDiarizationResult {
                 job_id: req.job_id,
                 file_id: req.file_id.clone(),
+                duration: req.duration,
                 result: Ok(result),
             })
             .collect(),
@@ -355,6 +361,7 @@ fn process_batch(
                 .map(|req| QueuedDiarizationResult {
                     job_id: req.job_id,
                     file_id: req.file_id.clone(),
+                    duration: req.duration,
                     result: pipeline.run_with_config(&req.audio, &req.file_id, config),
                 })
                 .collect()

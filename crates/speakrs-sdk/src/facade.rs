@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::sync::{Mutex, MutexGuard};
 use std::time::Instant;
 
 use speakrs::pipeline::{
@@ -24,7 +25,7 @@ pub struct SdkPipeline {
 
 pub struct SdkQueue {
     sender: QueueSender,
-    receiver: QueueReceiver,
+    receiver: Mutex<QueueReceiver>,
     mode: ExecutionModeDto,
     model_revision: String,
 }
@@ -174,7 +175,7 @@ impl SdkPipeline {
 
         Ok(SdkQueue {
             sender,
-            receiver,
+            receiver: Mutex::new(receiver),
             mode: self.mode,
             model_revision: self.model_revision,
         })
@@ -203,17 +204,30 @@ impl SdkQueue {
         self.push_samples(file_id, audio.samples)
     }
 
-    pub fn recv(&mut self) -> Result<SdkQueueResult, SdkError> {
-        let result = self.receiver.recv().map_err(SdkError::from_queue_error)?;
+    pub fn recv(&self) -> Result<SdkQueueResult, SdkError> {
+        let result = self
+            .receiver_guard()?
+            .recv()
+            .map_err(SdkError::from_queue_error)?;
         Ok(self.map_queue_result(result))
     }
 
-    pub fn try_recv(&mut self) -> Result<Option<SdkQueueResult>, SdkError> {
-        self.receiver
+    pub fn try_recv(&self) -> Result<Option<SdkQueueResult>, SdkError> {
+        self.receiver_guard()?
             .try_recv()
             .map_err(SdkError::from_queue_error)?
             .map(|result| Ok(self.map_queue_result(result)))
             .transpose()
+    }
+
+    fn receiver_guard(&self) -> Result<MutexGuard<'_, QueueReceiver>, SdkError> {
+        self.receiver.lock().map_err(|_| {
+            SdkError::new(
+                SdkErrorCategory::Internal,
+                SdkErrorCategory::Internal.code(),
+                "queue receiver lock was poisoned",
+            )
+        })
     }
 
     fn map_queue_result(
@@ -222,13 +236,14 @@ impl SdkQueue {
     ) -> SdkQueueResult {
         let file_id = result.file_id;
         let job_id = result.job_id.as_u64();
+        let duration = result.duration;
         let result = result
             .result
             .map(|result| {
                 map_result(
                     result,
                     &file_id,
-                    0.0,
+                    duration,
                     self.mode,
                     &self.model_revision,
                     TimingStatsDto::default(),
@@ -315,7 +330,7 @@ fn elapsed_ms(start: Instant) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Mutex, mpsc};
 
     use crate::audio::decode_file_to_mono_16khz;
     use crate::models::{DEFAULT_MODEL_REVISION, ModelManifest, ModelStore, PrepareModelsOptions};
@@ -466,7 +481,7 @@ mod tests {
         let decoded = decode_file_to_mono_16khz(&wav_path).unwrap();
         let pipeline =
             SdkPipeline::from_prepared(prepared, ExecutionModeDto::Cpu, None, None).unwrap();
-        let mut queue = pipeline.into_queue(None).unwrap();
+        let queue = pipeline.into_queue(None).unwrap();
 
         let sample_job = queue
             .push_samples("sample-job", decoded.samples.clone())
@@ -483,6 +498,32 @@ mod tests {
         assert_eq!(ids, [0, 1]);
         assert!(first.result.is_ok());
         assert!(second.result.is_ok());
+        assert!(first.result.as_ref().unwrap().duration > 0.0);
+        assert!(second.result.as_ref().unwrap().duration > 0.0);
+    }
+
+    #[test]
+    fn fixture_queue_accepts_push_while_recv_waits_on_another_thread() {
+        let prepared = fixture_prepared_models();
+        let wav_path = fixture_path("test_short.wav");
+        let decoded = decode_file_to_mono_16khz(&wav_path).unwrap();
+        let pipeline =
+            SdkPipeline::from_prepared(prepared, ExecutionModeDto::Cpu, None, None).unwrap();
+        let queue = Arc::new(pipeline.into_queue(None).unwrap());
+        let receiver_queue = Arc::clone(&queue);
+        let (waiting_tx, waiting_rx) = mpsc::channel();
+        let receiver = std::thread::spawn(move || {
+            waiting_tx.send(()).unwrap();
+            receiver_queue.recv()
+        });
+
+        waiting_rx.recv().unwrap();
+        let job_id = queue.push_samples("concurrent", decoded.samples).unwrap();
+        let result = receiver.join().unwrap().unwrap();
+
+        assert_eq!(result.job_id, job_id);
+        assert_eq!(result.file_id, "concurrent");
+        assert!(result.result.as_ref().unwrap().duration > 0.0);
     }
 
     fn fixture_prepared_models() -> PreparedModels {

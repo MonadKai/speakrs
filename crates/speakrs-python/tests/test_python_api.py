@@ -68,8 +68,12 @@ def test_queue_accepts_sample_and_path_jobs():
     assert {sample_result.file_id, path_result.file_id} == {"sample", "path"}
     assert sample_result.ok
     assert path_result.ok
-    assert sample_result.unwrap().mode == "CPU"
-    assert path_result.unwrap().mode == "CPU"
+    sample = sample_result.unwrap()
+    path = path_result.unwrap()
+    assert sample.mode == "CPU"
+    assert path.mode == "CPU"
+    assert sample.duration > 0.0
+    assert path.duration > 0.0
 
 
 def test_cli_diarizes_fixture(capsys):

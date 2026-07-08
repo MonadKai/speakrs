@@ -244,9 +244,7 @@ impl SpeakrsPipeline {
             .into_queue(pipeline_config.map(pipeline_config_dto).transpose()?)
             .map_err(SpeakrsError::from)?;
 
-        Ok(Arc::new(SpeakrsQueue {
-            inner: Mutex::new(queue),
-        }))
+        Ok(Arc::new(SpeakrsQueue { inner: queue }))
     }
 }
 
@@ -263,31 +261,25 @@ impl SpeakrsPipeline {
 
 #[derive(uniffi::Object)]
 pub struct SpeakrsQueue {
-    inner: Mutex<SdkQueue>,
+    inner: SdkQueue,
 }
 
 #[uniffi::export]
 impl SpeakrsQueue {
     pub fn push_samples(&self, file_id: String, samples: Vec<f32>) -> Result<u64, SpeakrsError> {
         self.inner
-            .lock()
-            .map_err(|_| lock_error("queue"))?
             .push_samples(file_id, samples)
             .map_err(SpeakrsError::from)
     }
 
     pub fn push_file(&self, file_id: String, path: String) -> Result<u64, SpeakrsError> {
         self.inner
-            .lock()
-            .map_err(|_| lock_error("queue"))?
             .push_file(file_id, PathBuf::from(path))
             .map_err(SpeakrsError::from)
     }
 
     pub fn recv(&self) -> Result<QueueResult, SpeakrsError> {
         self.inner
-            .lock()
-            .map_err(|_| lock_error("queue"))?
             .recv()
             .map(Into::into)
             .map_err(SpeakrsError::from)
@@ -295,8 +287,6 @@ impl SpeakrsQueue {
 
     pub fn try_recv(&self) -> Result<Option<QueueResult>, SpeakrsError> {
         self.inner
-            .lock()
-            .map_err(|_| lock_error("queue"))?
             .try_recv()
             .map(|result| result.map(Into::into))
             .map_err(SpeakrsError::from)

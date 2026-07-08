@@ -675,9 +675,7 @@ impl PyPipeline {
             .ok_or_else(|| PyRuntimeError::new_err("pipeline was already converted to a queue"))?;
         pipeline
             .into_queue(pipeline_config.map(|config| config.inner))
-            .map(|inner| PyQueue {
-                inner: Mutex::new(inner),
-            })
+            .map(|inner| PyQueue { inner })
             .map_err(sdk_py_err)
     }
 }
@@ -698,40 +696,29 @@ impl PyPipeline {
 
 #[pyclass(name = "_Queue")]
 struct PyQueue {
-    inner: Mutex<SdkQueue>,
+    inner: SdkQueue,
 }
 
 #[pymethods]
 impl PyQueue {
     fn push_samples(&self, file_id: String, samples: Vec<f32>) -> PyResult<u64> {
         self.inner
-            .lock()
-            .map_err(|_| PyRuntimeError::new_err("queue lock was poisoned"))?
             .push_samples(file_id, samples)
             .map_err(sdk_py_err)
     }
 
     fn push_file(&self, file_id: String, path: PathBuf) -> PyResult<u64> {
-        self.inner
-            .lock()
-            .map_err(|_| PyRuntimeError::new_err("queue lock was poisoned"))?
-            .push_file(file_id, path)
-            .map_err(sdk_py_err)
+        self.inner.push_file(file_id, path).map_err(sdk_py_err)
     }
 
-    fn recv(&mut self) -> PyResult<PyQueueResult> {
-        self.inner
-            .lock()
-            .map_err(|_| PyRuntimeError::new_err("queue lock was poisoned"))?
-            .recv()
+    fn recv(&self, py: Python<'_>) -> PyResult<PyQueueResult> {
+        py.detach(|| self.inner.recv())
             .map(py_queue_result)
             .map_err(sdk_py_err)
     }
 
-    fn try_recv(&mut self) -> PyResult<Option<PyQueueResult>> {
+    fn try_recv(&self) -> PyResult<Option<PyQueueResult>> {
         self.inner
-            .lock()
-            .map_err(|_| PyRuntimeError::new_err("queue lock was poisoned"))?
             .try_recv()
             .map(|result| result.map(py_queue_result))
             .map_err(sdk_py_err)
