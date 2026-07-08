@@ -136,14 +136,17 @@ jobs:
           - os: ubuntu-24.04
             cibw-build: "cp310-* cp311-* cp312-* cp313-* cp314-*"
             cibw-config-settings-macos: ""
+            cibw-environment-macos: ""
             cibw-skip: "*-musllinux_*"
           - os: macos-26
             cibw-build: "cp310-* cp311-* cp312-* cp313-* cp314-*"
             cibw-config-settings-macos: ""
+            cibw-environment-macos: ""
             cibw-skip: ""
           - os: macos-26-intel
             cibw-build: "cp310-* cp311-* cp312-* cp313-*"
             cibw-config-settings-macos: "build-args='--no-default-features --features pyo3/extension-module,online,dynamic-ort'"
+            cibw-environment-macos: "MACOSX_DEPLOYMENT_TARGET=10.12"
             cibw-skip: ""
     steps:
       - uses: actions/checkout@v6
@@ -171,6 +174,7 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.88.0"
           CIBW_CONFIG_SETTINGS_MACOS: ${{ matrix.cibw-config-settings-macos }}
           CIBW_CONFIG_SETTINGS_LINUX: "build-args='--no-default-features --features pyo3/extension-module,online,dynamic-ort'"
+          CIBW_ENVIRONMENT_MACOS: ${{ matrix.cibw-environment-macos }}
           CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
           CIBW_SKIP: ${{ matrix.cibw-skip }}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.15"
@@ -277,10 +281,12 @@ jobs:
         run: ./bindings/swift/scripts/package-xcframework.sh
 
       - name: Build Swift package for simulator
-        run: xcodebuild -quiet -scheme Speakrs -destination 'generic/platform=iOS Simulator' -sdk iphonesimulator -derivedDataPath bindings/swift/build/xcode build
+        working-directory: bindings/swift
+        run: xcodebuild -quiet -scheme Speakrs -destination 'generic/platform=iOS Simulator' -sdk iphonesimulator -derivedDataPath build/xcode build
 
       - name: Build Swift package for device
-        run: xcodebuild -quiet -scheme Speakrs -destination 'generic/platform=iOS' -sdk iphoneos -derivedDataPath bindings/swift/build/xcode-device build
+        working-directory: bindings/swift
+        run: xcodebuild -quiet -scheme Speakrs -destination 'generic/platform=iOS' -sdk iphoneos -derivedDataPath build/xcode-device build
 
       - name: Generate sample project
         working-directory: bindings/swift/Samples/DiarizeFile
