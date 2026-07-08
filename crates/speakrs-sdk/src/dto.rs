@@ -23,6 +23,9 @@ impl ExecutionModeDto {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -151,6 +154,9 @@ impl PipelineConfigDto {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -169,6 +175,9 @@ impl From<PipelineConfigDto> for speakrs::pipeline::PipelineConfig {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -187,6 +196,9 @@ impl From<BinarizeConfigDto> for speakrs::pipeline::BinarizeConfig {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -200,6 +212,9 @@ impl From<AhcConfigDto> for speakrs::pipeline::AhcConfig {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -217,6 +232,9 @@ impl From<VbxConfigDto> for speakrs::pipeline::VbxConfig {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -244,6 +262,9 @@ impl Default for RuntimeConfigDto {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -281,6 +302,9 @@ impl SegmentDto {
 
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -330,12 +354,18 @@ pub enum ProgressEvent {
 mod tests {
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
     use speakrs::inference::ExecutionMode;
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
@@ -375,6 +405,9 @@ mod tests {
     #[test]
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
@@ -385,6 +418,9 @@ mod tests {
     #[test]
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
@@ -408,6 +444,9 @@ mod tests {
     #[test]
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
@@ -435,6 +474,9 @@ mod tests {
     #[test]
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
@@ -455,6 +497,9 @@ mod tests {
 
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]
@@ -481,6 +526,9 @@ mod tests {
 
     #[cfg(any(
         feature = "pipeline",
+        feature = "portable-pipeline",
+        feature = "cuda-pipeline",
+        feature = "migraphx-pipeline",
         feature = "android-pipeline",
         feature = "ios-coreml"
     ))]

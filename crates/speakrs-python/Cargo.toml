@@ -14,12 +14,14 @@ name = "speakrs_native"
 crate-type = ["cdylib"]
 
 [features]
-default = ["online"]
+default = ["online", "default-linalg"]
 coreml = ["speakrs-sdk/coreml"]
 cuda = ["speakrs-sdk/cuda-pipeline"]
 migraphx = ["speakrs-sdk/migraphx-pipeline"]
+default-linalg = ["speakrs-sdk/pipeline"]
 online = ["speakrs-sdk/online"]
+portable-linalg = ["speakrs-sdk/portable-pipeline"]
 
 [dependencies]
 pyo3 = { version = "0.29.0", features = ["extension-module"] }
-speakrs-sdk = { path = "../speakrs-sdk", features = ["pipeline"] }
+speakrs-sdk = { path = "../speakrs-sdk" }

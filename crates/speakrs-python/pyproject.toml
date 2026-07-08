@@ -39,4 +39,5 @@ Documentation = "https://docs.rs/speakrs"
 [tool.maturin]
 module-name = "speakrs._native"
 python-source = "python"
-features = ["pyo3/extension-module"]
+no-default-features = true
+features = ["pyo3/extension-module", "online", "portable-linalg"]

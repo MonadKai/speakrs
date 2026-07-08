@@ -41,4 +41,5 @@ Documentation = "https://docs.rs/speakrs"
 manifest-path = "../../../crates/speakrs-python/Cargo.toml"
 module-name = "speakrs._native"
 python-source = "../../../crates/speakrs-python/python"
-features = ["pyo3/extension-module", "migraphx"]
+no-default-features = true
+features = ["pyo3/extension-module", "online", "migraphx"]

@@ -160,7 +160,6 @@ jobs:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           CIBW_BUILD_FRONTEND: "build[uv]"
           CIBW_SKIP: "*-musllinux_*"
-          CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_34"
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.15"
           CIBW_TEST_COMMAND: "python -c \"import speakrs; assert speakrs.__version__ == '0.5.0'; assert 'segmentation-3.0.onnx' in speakrs.required_model_files()\""
 

@@ -6,6 +6,9 @@ pub mod dto;
 pub mod error;
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
@@ -22,6 +25,9 @@ pub use dto::{
 pub use error::{SdkError, SdkErrorCategory};
 #[cfg(any(
     feature = "pipeline",
+    feature = "portable-pipeline",
+    feature = "cuda-pipeline",
+    feature = "migraphx-pipeline",
     feature = "android-pipeline",
     feature = "ios-coreml"
 ))]
