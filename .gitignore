@@ -12,3 +12,12 @@ fixtures/datasets/
 .envrc
 /scripts/speakerkit-bench/Packages
 scripts/speakerkit-bench/Package.resolved
+
+bindings/android/.gradle/
+bindings/android/.kotlin/
+bindings/android/build/
+bindings/android/sample/build/
+bindings/android/speakrs/build/
+bindings/swift/artifacts/
+bindings/swift/build/
+bindings/swift/Samples/DiarizeFile/build/
