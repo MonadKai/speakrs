@@ -15,6 +15,7 @@ ios-coreml = ["dep:speakrs", "speakrs/coreml", "speakrs/load-dynamic", "speakrs/
 online = ["dep:hf-hub", "hf-hub/ureq"]
 pipeline = ["dep:speakrs", "speakrs/default-linalg"]
 portable-pipeline = ["dep:speakrs", "speakrs/pure-linalg"]
+dynamic-pipeline = ["portable-pipeline", "speakrs/load-dynamic"]
 android-pipeline = ["dep:speakrs", "speakrs/pure-linalg"]
 android-bundled = ["android-pipeline", "speakrs/load-dynamic"]
 android-lean = ["android-pipeline", "speakrs/load-dynamic"]

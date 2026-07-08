@@ -1,10 +1,42 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
+import os
+import sys
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Callable, Iterable
+
+
+def _configure_ort_dylib_path() -> None:
+    if os.environ.get("ORT_DYLIB_PATH"):
+        return
+
+    spec = importlib.util.find_spec("onnxruntime")
+    if spec is None or spec.submodule_search_locations is None:
+        return
+
+    if sys.platform == "darwin":
+        patterns = ("libonnxruntime.dylib", "libonnxruntime.*.dylib")
+    elif sys.platform.startswith("linux"):
+        patterns = ("libonnxruntime.so", "libonnxruntime.so.*")
+    elif sys.platform == "win32":
+        patterns = ("onnxruntime.dll",)
+    else:
+        return
+
+    for root in spec.submodule_search_locations:
+        capi_dir = Path(root) / "capi"
+        for pattern in patterns:
+            for path in sorted(capi_dir.glob(pattern)):
+                if path.is_file():
+                    os.environ["ORT_DYLIB_PATH"] = str(path)
+                    return
+
+
+_configure_ort_dylib_path()
 
 from . import _native
 
