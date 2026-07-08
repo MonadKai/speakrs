@@ -7,7 +7,7 @@ This checklist is the release operator path for the public Python, Android, and 
 - Run the package workflow from `.github/workflows/package.yml` on the release commit.
 - Confirm the Rust crate job packages `speakrs` and checks the packaged crate as a dependency.
 - Confirm the Rust API docs artifact is uploaded.
-- Confirm the Python wheel job uploads wheels for Linux x86_64, macOS arm64, and macOS x86_64 for CPython 3.10 through 3.13.
+- Confirm the Python wheel job uploads wheels for Linux x86_64, macOS arm64, and macOS x86_64 for CPython 3.10 through 3.14.
 - Confirm clean install/import smoke passes for every built CPU wheel.
 - Confirm Android lean and bundled-ORT Maven-local publication, sample APK builds, native ABI inspection, APK fixture asset inspection, and bundled ONNX Runtime APK inspection pass.
 - Confirm the Swift XCFramework, Swift package, sample app, zipped binary artifact, and checksum steps pass.

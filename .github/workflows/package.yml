@@ -148,15 +148,18 @@ jobs:
           cache-bin: false
           prefix-key: v1-rust-python-wheels-${{ matrix.os }}
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
       - name: Build Python wheels
         uses: pypa/cibuildwheel@v4.1.0
         with:
           package-dir: crates/speakrs-python
           output-dir: wheelhouse
         env:
-          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-*"
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           CIBW_BUILD_FRONTEND: "build[uv]"
-          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.14"
+          CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.15"
           CIBW_TEST_COMMAND: "python -c \"import speakrs; assert speakrs.__version__ == '0.5.0'; assert 'segmentation-3.0.onnx' in speakrs.required_model_files()\""
 
       - name: Upload Python wheels
