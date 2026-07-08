@@ -159,6 +159,8 @@ jobs:
         env:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           CIBW_BUILD_FRONTEND: "build[uv]"
+          CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.88.0"
+          CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
           CIBW_MANYLINUX_X86_64_IMAGE: "manylinux_2_34"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.15"
