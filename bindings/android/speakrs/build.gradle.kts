@@ -224,8 +224,20 @@ tasks.matching { it.name == "preBundledOrtReleaseBuild" }.configureEach {
     dependsOn(generateUniFfiKotlin, buildBundledOrtRustAndroid)
 }
 
+tasks.matching { it.name == "preBundledOrtDebugBuild" }.configureEach {
+    dependsOn(generateUniFfiKotlin, buildBundledOrtRustAndroid)
+}
+
 tasks.matching { it.name == "preLeanReleaseBuild" }.configureEach {
     dependsOn(generateUniFfiKotlin, buildLeanRustAndroid)
+}
+
+tasks.matching { it.name == "preLeanDebugBuild" }.configureEach {
+    dependsOn(generateUniFfiKotlin, buildLeanRustAndroid)
+}
+
+tasks.matching { it.name.startsWith("compile") && it.name.endsWith("Kotlin") }.configureEach {
+    dependsOn(generateUniFfiKotlin)
 }
 
 dependencies {
