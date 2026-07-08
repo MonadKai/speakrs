@@ -132,10 +132,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-24.04
-          - macos-26
-          - macos-26-intel
+        include:
+          - os: ubuntu-24.04
+            cibw-build: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+            cibw-config-settings-macos: ""
+            cibw-skip: "*-musllinux_*"
+          - os: macos-26
+            cibw-build: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+            cibw-config-settings-macos: ""
+            cibw-skip: ""
+          - os: macos-26-intel
+            cibw-build: "cp310-* cp311-* cp312-* cp313-*"
+            cibw-config-settings-macos: "build-args='--no-default-features --features pyo3/extension-module,online,dynamic-ort'"
+            cibw-skip: ""
     steps:
       - uses: actions/checkout@v6
 
@@ -157,12 +166,13 @@ jobs:
           package-dir: crates/speakrs-python
           output-dir: wheelhouse
         env:
-          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_BUILD: ${{ matrix.cibw-build }}
           CIBW_BUILD_FRONTEND: "build[uv]"
           CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.88.0"
+          CIBW_CONFIG_SETTINGS_MACOS: ${{ matrix.cibw-config-settings-macos }}
           CIBW_CONFIG_SETTINGS_LINUX: "build-args='--no-default-features --features pyo3/extension-module,online,dynamic-ort'"
           CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
-          CIBW_SKIP: "*-musllinux_*"
+          CIBW_SKIP: ${{ matrix.cibw-skip }}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.15"
           CIBW_TEST_COMMAND: "python -c \"import speakrs; assert speakrs.__version__ == '0.5.0'; assert 'segmentation-3.0.onnx' in speakrs.required_model_files()\""
 
