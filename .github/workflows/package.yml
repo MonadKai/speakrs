@@ -28,6 +28,7 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
+  SPEAKRS_MODEL_FIXTURE_REV: 5d24ffee75f13fb061fa6d10944a64e2dc1d5e6f
 
 jobs:
   crate:
@@ -163,6 +164,37 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
 
+      - name: Download model fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_url="https://huggingface.co/avencera/speakrs-models/resolve/${SPEAKRS_MODEL_FIXTURE_REV}"
+          files=(
+            plda_lda.npy
+            plda_mean1.npy
+            plda_mean2.npy
+            plda_mu.npy
+            plda_psi.npy
+            plda_tr.npy
+            segmentation-3.0.onnx
+            wespeaker-voxceleb-resnet34.min_num_samples.txt
+            wespeaker-voxceleb-resnet34.onnx
+            wespeaker-voxceleb-resnet34.onnx.data
+          )
+
+          mkdir -p fixtures/models
+          for file in "${files[@]}"; do
+            path="fixtures/models/${file}"
+            if [[ ! -s "$path" ]]; then
+              curl --retry 3 --retry-delay 5 -LfsS "${base_url}/${file}" -o "$path"
+            fi
+          done
+
+          for file in "${files[@]}"; do
+            test -s "fixtures/models/${file}"
+          done
+
       - name: Build Python wheels
         uses: pypa/cibuildwheel@v4.1.0
         with:
@@ -178,7 +210,8 @@ jobs:
           CIBW_ENVIRONMENT_LINUX: "PATH=/root/.cargo/bin:$PATH"
           CIBW_SKIP: ${{ matrix.cibw-skip }}
           CIBW_PROJECT_REQUIRES_PYTHON: ">=3.10,<3.15"
-          CIBW_TEST_COMMAND: "python -c \"import speakrs; assert speakrs.__version__ == '0.5.0'; assert 'segmentation-3.0.onnx' in speakrs.required_model_files()\""
+          CIBW_TEST_COMMAND: >-
+            python -c "from pathlib import Path; import speakrs; project = Path(r'{project}'); assert speakrs.__version__ == '0.5.0'; assert 'segmentation-3.0.onnx' in speakrs.required_model_files(); prepared = speakrs.prepare(model_dir=project / 'fixtures' / 'models'); pipeline = speakrs.Pipeline.from_prepared(prepared); result = pipeline.diarize_file(project / 'fixtures' / 'test_short.wav'); assert result.duration > 0.0"
 
       - name: Upload Python wheels
         uses: actions/upload-artifact@v6

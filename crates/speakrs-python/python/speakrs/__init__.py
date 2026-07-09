@@ -122,8 +122,30 @@ class PipelineConfig:
     reconstruct_epsilon: float | None = None
 
     @classmethod
-    def for_mode(cls, mode: ExecutionMode | str) -> _native._PipelineConfig:
-        return _native._PipelineConfig.for_mode(_mode_value(mode))
+    def for_mode(cls, mode: ExecutionMode | str) -> PipelineConfig:
+        config = _native._PipelineConfig.for_mode(_mode_value(mode))
+        return cls(
+            binarize=BinarizeConfig(
+                config.binarize.onset,
+                config.binarize.offset,
+                config.binarize.min_duration_on,
+                config.binarize.min_duration_off,
+                config.binarize.pad_onset,
+                config.binarize.pad_offset,
+            ),
+            ahc=AhcConfig(config.ahc.threshold),
+            vbx=VbxConfig(
+                config.vbx.fa,
+                config.vbx.fb,
+                config.vbx.max_iters,
+                config.vbx.epsilon,
+                config.vbx.init_smoothing,
+            ),
+            merge_gap=config.merge_gap,
+            speaker_keep_threshold=config.speaker_keep_threshold,
+            reconstruct_method=config.reconstruct_method,
+            reconstruct_epsilon=config.reconstruct_epsilon,
+        )
 
     def _native(self):
         return _native._PipelineConfig(

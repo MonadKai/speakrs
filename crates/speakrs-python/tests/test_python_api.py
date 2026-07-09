@@ -17,6 +17,17 @@ def test_import_surface_and_defaults():
     assert "segmentation-3.0.onnx" in speakrs.required_model_files()
 
 
+def test_pipeline_config_for_mode_returns_public_dataclass():
+    config = speakrs.PipelineConfig.for_mode(speakrs.ExecutionMode.CUDAFast)
+
+    assert isinstance(config, speakrs.PipelineConfig)
+    assert config.binarize is not None
+    assert config.binarize.min_duration_on == 3
+    assert config.vbx is not None
+    assert config.vbx.max_iters == 3
+    assert hasattr(config, "_native")
+
+
 def test_prepare_fixture_models_and_diarize_file():
     events = []
     prepared = speakrs.prepare(model_dir=REPO_ROOT / "fixtures" / "models")

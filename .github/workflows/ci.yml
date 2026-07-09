@@ -201,3 +201,6 @@ jobs:
 
       - name: Run no-default-features runtime tests
         run: cargo test -p speakrs --no-default-features --features "online,intel-mkl"
+
+      - name: Run pure-linalg runtime tests
+        run: cargo test -p speakrs --no-default-features --features "online,pure-linalg"

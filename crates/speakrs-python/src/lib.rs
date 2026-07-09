@@ -701,14 +701,14 @@ struct PyQueue {
 
 #[pymethods]
 impl PyQueue {
-    fn push_samples(&self, file_id: String, samples: Vec<f32>) -> PyResult<u64> {
-        self.inner
-            .push_samples(file_id, samples)
+    fn push_samples(&self, py: Python<'_>, file_id: String, samples: Vec<f32>) -> PyResult<u64> {
+        py.detach(|| self.inner.push_samples(file_id, samples))
             .map_err(sdk_py_err)
     }
 
-    fn push_file(&self, file_id: String, path: PathBuf) -> PyResult<u64> {
-        self.inner.push_file(file_id, path).map_err(sdk_py_err)
+    fn push_file(&self, py: Python<'_>, file_id: String, path: PathBuf) -> PyResult<u64> {
+        py.detach(|| self.inner.push_file(file_id, path))
+            .map_err(sdk_py_err)
     }
 
     fn recv(&self, py: Python<'_>) -> PyResult<PyQueueResult> {
