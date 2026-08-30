@@ -240,14 +240,15 @@ fn ort_err(e: impl std::fmt::Display) -> color_eyre::eyre::Report {
 }
 
 fn build_embedding_session(model_path: &Path, ort_defaults: bool) -> Result<Session> {
+    let environment = ort::init().build().map_err(ort_err)?;
     if ort_defaults {
-        return Session::builder()
+        return Session::builder(&environment)
             .map_err(ort_err)?
             .commit_from_file(model_path)
             .map_err(ort_err);
     }
 
-    let mut builder = Session::builder()
+    let mut builder = Session::builder(&environment)
         .map_err(ort_err)?
         .with_independent_thread_pool()
         .map_err(ort_err)?

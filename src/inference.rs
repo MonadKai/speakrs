@@ -7,7 +7,6 @@ use std::fmt;
 #[cfg(all(feature = "load-dynamic", not(target_arch = "wasm32")))]
 use std::path::Path;
 use std::path::PathBuf;
-#[cfg(all(feature = "load-dynamic", not(target_arch = "wasm32")))]
 use std::sync::OnceLock;
 
 pub use embedding::EmbeddingModel;
@@ -16,11 +15,30 @@ pub use segmentation::{SegmentationError, SegmentationModel};
 #[cfg(feature = "coreml")]
 pub(crate) mod coreml;
 
+use ort::environment::Environment;
 use ort::ep;
 use ort::session::builder::SessionBuilder;
 
 #[cfg(all(feature = "load-dynamic", not(target_arch = "wasm32")))]
 static ORT_RUNTIME_INIT: OnceLock<Result<(), OrtRuntimeError>> = OnceLock::new();
+static ORT_ENVIRONMENT: OnceLock<Environment> = OnceLock::new();
+
+/// Register the process-wide ONNX Runtime environment used by every Speakrs session.
+///
+/// The caller retains environment construction authority. Speakrs only clones the
+/// handle so sessions cannot outlive it. Re-registering is harmless because ORT
+/// permits only one environment per process.
+pub fn register_ort_environment(environment: &Environment) {
+    ORT_ENVIRONMENT.get_or_init(|| environment.clone());
+}
+
+pub(crate) fn ort_environment() -> Result<&'static Environment, ort::Error> {
+    ORT_ENVIRONMENT.get().ok_or_else(|| {
+        ort::Error::new(
+            "Speakrs ONNX Runtime environment is not registered; call register_ort_environment before loading models",
+        )
+    })
+}
 
 /// CoreML compute unit selection for chunk embedding
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

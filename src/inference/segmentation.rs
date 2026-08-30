@@ -5,7 +5,9 @@ use ort::session::Session;
 
 #[cfg(feature = "coreml")]
 use crate::inference::coreml::{CachedInputShape, SharedCoreMlModel};
-use crate::inference::{ExecutionMode, ModelLoadError, ensure_ort_ready, with_execution_mode};
+use crate::inference::{
+    ExecutionMode, ModelLoadError, ensure_ort_ready, ort_environment, with_execution_mode,
+};
 #[cfg(feature = "coreml")]
 mod native;
 #[cfg(feature = "coreml")]
@@ -208,7 +210,7 @@ impl SegmentationModel {
     }
 
     fn build_session(model_path: &Path, mode: ExecutionMode) -> Result<Session, ort::Error> {
-        let builder = Session::builder()?
+        let builder = Session::builder(ort_environment()?)?
             .with_independent_thread_pool()?
             .with_intra_threads(Self::available_threads().min(6))?
             .with_inter_threads(1)?

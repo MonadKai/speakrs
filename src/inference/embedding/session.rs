@@ -2,7 +2,7 @@ use std::path::Path;
 
 use ort::session::Session;
 
-use crate::inference::with_execution_mode;
+use crate::inference::{ort_environment, with_execution_mode};
 
 use super::{EmbeddingModel, ExecutionMode};
 
@@ -19,7 +19,7 @@ impl EmbeddingModel {
         mode: ExecutionMode,
         cuda_graph: bool,
     ) -> Result<Session, ort::Error> {
-        let builder = Session::builder()?
+        let builder = Session::builder(ort_environment()?)?
             .with_independent_thread_pool()?
             .with_intra_threads(1)?
             .with_inter_threads(1)?
@@ -65,7 +65,7 @@ impl EmbeddingModel {
         let threads = std::thread::available_parallelism()
             .map(|count| count.get().min(4))
             .unwrap_or(1);
-        let builder = Session::builder()?
+        let builder = Session::builder(ort_environment()?)?
             .with_independent_thread_pool()?
             .with_intra_threads(threads)?
             .with_inter_threads(1)?
