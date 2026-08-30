@@ -46,7 +46,7 @@ ndarray-linalg-static = { package = "ndarray-linalg", version = "0.18.1", featur
 ndarray-linalg-system = { package = "ndarray-linalg", version = "0.18.1", features = ["openblas-system"], optional = true }
 ndarray-npy = "0.10.0"
 
-ort = { version = "2.0.0-rc.13", default-features = false, features = ["api-24", "ndarray", "std", "tracing"] }
+ort = { git = "https://github.com/pykeio/ort", rev = "02b13133f0c9d17d06ab0046ac20e5b36e56c37a", default-features = false, features = ["api-24", "ndarray", "std", "tracing"] }
 libloading = { version = "0.9.0", optional = true }
 
 # logging
@@ -92,6 +92,9 @@ objc2-foundation = { version = "0.3", optional = true, features = [
     "NSEnumerator",
     "NSObjCRuntime",
 ] }
+
+[patch.crates-io]
+ort-sys = { git = "https://github.com/pykeio/ort", rev = "02b13133f0c9d17d06ab0046ac20e5b36e56c37a" }
 
 [dev-dependencies]
 approx = "0.5.1"

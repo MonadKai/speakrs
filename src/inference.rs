@@ -348,9 +348,7 @@ impl OrtRuntimeLoader {
         self.validate_library(&path)?;
 
         ort::init_from(&path)
-            .map(|builder| {
-                builder.commit();
-            })
+            .map(|_builder| ())
             .map_err(|error| OrtRuntimeError::Initialization {
                 message: error.to_string(),
             })
